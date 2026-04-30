@@ -1,0 +1,84 @@
+
+# [OS & 시스템 파일]
+# 운영체제가 폴더 관리를 위해 자동으로 만드는 파일들입니다.
+
+
+.DS_Store                    # macOS에서 폴더 보기 설정을 저장하는 파일 (숨김 파일)
+Thumbs.db                    # Windows에서 이미지 미리보기를 위해 생성하는 데이터베이스 파일
+*.local                      # 로컬 개발 환경에서만 임시로 사용하는 설정 파일들
+.cursor/rules/nx-rules.mdc    # AI 코드 에디터(Cursor)의 특정 프로젝트 규칙 파일
+.github/instructions/nx.instructions.md # GitHub 관련 보조 안내 파일
+
+
+# [에디터 및 IDE 설정]
+# 개발자 개인의 도구 설정입니다. 팀원마다 다를 수 있어 공유하지 않습니다.
+
+
+.vscode/*                    # VS Code 에디터의 개인 설정 폴더 전체 제외
+!.vscode/extensions.json     # (예외) 팀원들에게 권장하는 확장 프로그램 목록은 공유함
+.idea/                       # IntelliJ, WebStorm 등 JetBrains 에디터 설정 폴더
+*.suo                        # Visual Studio 사용자 옵션 파일
+*.ntvs*                      # Visual Studio용 Node.js 도구 관련 파일
+*.njsproj                    # Visual Studio Node.js 프로젝트 파일
+*.sln                        # Visual Studio 솔루션 파일
+*.sw?                        # Vim 에디터에서 생성되는 임시 스왑(Swap) 파일
+
+
+# [로그 및 임시 파일]
+# 실행 기록이나 임시 저장소입니다. 파일이 수시로 변하므로 제외합니다.
+
+
+logs                         # 서비스 실행 로그가 저장되는 폴더
+*.log                        # 모든 확장자가 .log인 기록 파일
+npm-debug.log*               # npm 실행 중 오류 발생 시 생성되는 로그
+yarn-debug.log*              # yarn 실행 시 생성되는 디버그 로그
+yarn-error.log*              # yarn 실행 중 에러 발생 시 생성되는 로그
+pnpm-debug.log*              # pnpm 패키지 매니저의 디버그 로그
+lerna-debug.log*             # 모노레포 관리 도구(Lerna)의 로그
+.cache/                      # 빌드 속도를 높이기 위해 도구들이 사용하는 임시 캐시 폴더
+
+# [의존성 패키지]
+# 외부 라이브러리 폴더입니다. 용량이 크고 재설치가 가능해 올리지 않습니다.
+
+
+node_modules/                # 설치된 라이브러리 폴더 (pnpm install로 언제든 복구 가능)
+/libpeerconnection.log       # 특정 라이브러리 사용 시 발생하는 통신 관련 로그 파일
+
+
+# [빌드 및 실행 결과물]
+# 코드를 컴파일하거나 압축한 결과물입니다. 원본 코드만 관리하면 됩니다.
+
+dist/                        # 최종 배포를 위해 빌드된 파일들이 담기는 폴더
+dist-ssr/                    # 서버 사이드 렌더링(SSR)용 빌드 결과물
+tmp/                         # 작업 중 생성되는 임시 파일 폴더
+out-tsc/                     # TypeScript 컴파일 결과물이 담기는 폴더
+*.tsbuildinfo                # TypeScript 증분 빌드 정보 파일
+.expo/                       # 모바일 개발 도구(Expo) 관련 설정 폴더
+
+
+# [Python 관련]
+# 파이썬 개발 환경에서 생성되는 불필요한 파일들입니다.
+
+__pycache__/                 # 파이썬 실행 속도 향상을 위해 생성되는 컴파일 파일
+.venv/                       # 파이썬 가상환경 폴더 (개별 환경마다 다르므로 제외)
+venv/                        # 가상환경 폴더의 다른 이름
+ENV/                         # 가상환경 폴더의 또 다른 이름
+env/                         # 가상환경 폴더의 일반적인 이름
+python/                      # 로컬 파이썬 관련 설정 폴더
+*.pyc                        # 파이썬 컴파일 결과 파일
+
+
+# [보안 및 환경 변수]
+# 유출 시 보안 사고로 이어질 수 있는 민감한 정보들입니다. (매우 중요)
+
+.env                         # API 키, DB 비밀번호 등이 담긴 환경 변수 파일
+.env.*                       # 모든 형태의 환경 변수 파일 (.env.local 등)
+!.env.example                # (예외) 어떤 환경변수가 필요한지 알려주는 예시 파일은 공유함
+users.json                   # 실제 사용자 정보가 포함된 데이터 파일 (개인정보 보호)
+
+
+# [기타 도구]
+# 온라인 코딩 환경이나 특정 도구 전용 파일들입니다.
+
+.replit                      # 온라인 IDE Replit 설정 파일
+.apt_cache/                  # 리눅스 패키지 설치 시 생성되는 임시 캐시 폴더
