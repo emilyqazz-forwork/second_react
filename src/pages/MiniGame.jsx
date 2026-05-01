@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
-const W = 700;
-const H = 240;
+const W = 960;
+const H = 340;
 const GY = 185;
 const GRAVITY = 0.85;
 const JUMP_V = -14;
@@ -119,7 +119,6 @@ export function MiniGame() {
     dist: 0,
     bgOffset: 0,
     lives: MAX_LIVES,
-    score: 0,
     obstacles: [],
     sparkles: [],
     deathFlash: 0,
@@ -129,7 +128,7 @@ export function MiniGame() {
     currentObs: null,
     bird: { x: 80, y: GY, vy: 0, onGround: true, canDouble: true, dead: false, legPhase: 0 },
   });
-  const [uiState, setUiState] = useState({ stage: 'STAGE 1', prog: 0, lives: MAX_LIVES, score: 0, color: '#5a9b5a' });
+  const [uiState, setUiState] = useState({ stage: 'STAGE 1', prog: 0, lives: MAX_LIVES, color: '#5a9b5a' });
   const [quizState, setQuizState] = useState(emptyQuizState);
 
   useEffect(() => {
@@ -152,7 +151,6 @@ export function MiniGame() {
         prev.stage === nextState.stage &&
         prev.prog === nextState.prog &&
         prev.lives === nextState.lives &&
-        prev.score === nextState.score &&
         prev.color === nextState.color
       ) {
         return;
@@ -195,7 +193,6 @@ export function MiniGame() {
       } else if (!nextStage || g.stageIdx >= STAGES.length - 1) {
         g.stageIdx = 0;
         g.lives = MAX_LIVES;
-        g.score = 0;
       }
 
       g.state = 'running';
@@ -210,7 +207,7 @@ export function MiniGame() {
       Object.assign(g.bird, { y: GY, vy: 0, onGround: true, canDouble: true, dead: false, legPhase: 0 });
       genObstacles();
       setQuizState(emptyQuizState());
-      syncUi({ stage: getStage().name, prog: 0, lives: g.lives, score: g.score, color: getStage().color });
+      syncUi({ stage: getStage().name, prog: 0, lives: g.lives, color: getStage().color });
     }
 
     function collides(o) {
@@ -234,7 +231,7 @@ export function MiniGame() {
       g.currentQuiz = null;
       g.currentObs = null;
       setQuizState(emptyQuizState());
-      syncUi({ stage: getStage().name, prog: Math.min(Math.round((g.dist / getStage().stageLen) * 100), 100), lives: g.lives, score: g.score, color: getStage().color });
+      syncUi({ stage: getStage().name, prog: Math.min(Math.round((g.dist / getStage().stageLen) * 100), 100), lives: g.lives, color: getStage().color });
     }
 
     answerQuizRef.current = (answer) => {
@@ -244,11 +241,10 @@ export function MiniGame() {
       setQuizState((prev) => ({ ...prev, locked: true }));
 
       if (correct) {
-        g.score += 100;
         g.currentObs.passed = true;
         spawnSparkles(g.bird.x + 18, g.bird.y);
-        syncUi({ stage: getStage().name, prog: Math.min(Math.round((g.dist / getStage().stageLen) * 100), 100), lives: g.lives, score: g.score, color: getStage().color });
-        setQuizState((prev) => ({ ...prev, feedback: '정답! 장애물을 통과합니다. +100점', feedbackColor: '#2e7d32' }));
+        syncUi({ stage: getStage().name, prog: Math.min(Math.round((g.dist / getStage().stageLen) * 100), 100), lives: g.lives, color: getStage().color });
+        setQuizState((prev) => ({ ...prev, feedback: '정답! 장애물을 통과합니다.', feedbackColor: '#2e7d32' }));
         window.setTimeout(finishQuiz, 650);
         return;
       }
@@ -256,7 +252,7 @@ export function MiniGame() {
       g.lives = Math.max(0, g.lives - 1);
       g.deathFlash = 0.8;
       g.currentObs.passed = true;
-      syncUi({ stage: getStage().name, prog: Math.min(Math.round((g.dist / getStage().stageLen) * 100), 100), lives: g.lives, score: g.score, color: getStage().color });
+      syncUi({ stage: getStage().name, prog: Math.min(Math.round((g.dist / getStage().stageLen) * 100), 100), lives: g.lives, color: getStage().color });
       setQuizState((prev) => ({ ...prev, feedback: `오답! 정답: ${g.currentQuiz.ans} / 목숨 -1`, feedbackColor: '#c62828' }));
 
       window.setTimeout(() => {
@@ -426,9 +422,7 @@ export function MiniGame() {
       ctx.fillStyle = '#fff';
       ctx.font = 'bold 12px monospace';
       ctx.textAlign = 'center';
-      ctx.fillText('{ }', o.x + o.w / 2, o.y + o.h / 2 - 3);
-      ctx.font = 'bold 8px sans-serif';
-      ctx.fillText('JAVA', o.x + o.w / 2, o.y + o.h / 2 + 10);
+      ctx.fillText('🪨', o.x + o.w / 2, o.y + o.h / 2 + 6);
     }
 
     function drawProgressBar(s) {
@@ -475,7 +469,7 @@ export function MiniGame() {
         ctx.fillText('GAME OVER', W / 2, H / 2 - 22);
         ctx.font = '13px sans-serif';
         ctx.fillStyle = sc;
-        ctx.fillText(`${s.name} 도달 - 최종 ${g.score}점`, W / 2, H / 2 + 2);
+        ctx.fillText(`${s.name} 도달`, W / 2, H / 2 + 2);
         ctx.fillStyle = tc;
         ctx.fillText('스페이스바 / 클릭으로 재시작', W / 2, H / 2 + 22);
       }
@@ -490,7 +484,7 @@ export function MiniGame() {
         ctx.font = '13px sans-serif';
         ctx.fillStyle = tc;
         if (g.stageIdx >= STAGES.length - 1) {
-          ctx.fillText(`전설의 병아리! 최종 ${g.score}점`, W / 2, H / 2 + 10);
+          ctx.fillText('전설의 병아리!', W / 2, H / 2 + 10);
         } else {
           ctx.fillText(`목숨 ${g.lives}개 유지 - 클릭으로 다음 스테이지`, W / 2, H / 2 + 10);
         }
@@ -539,7 +533,7 @@ export function MiniGame() {
         }
 
         const pct = Math.min(Math.round((g.dist / s.stageLen) * 100), 100);
-        syncUi({ stage: s.name, prog: pct, lives: g.lives, score: g.score, color: s.color });
+        syncUi({ stage: s.name, prog: pct, lives: g.lives, color: s.color });
       }
 
       drawBg(s);
@@ -626,7 +620,7 @@ export function MiniGame() {
   const lifeColor = uiState.lives === 1 ? '#e53935' : uiState.lives === 2 ? '#f57c00' : '#2e7d32';
 
   return (
-    <div style={{ fontFamily: 'Noto Sans KR, sans-serif', maxWidth: 720, margin: '40px auto', padding: '0 16px' }}>
+    <div style={{ fontFamily: 'Noto Sans KR, sans-serif', maxWidth: 980, margin: '40px auto', padding: '0 16px' }}>
       <h2 style={{ marginBottom: 12, fontSize: 20, fontWeight: 900 }}>자바 퀴즈 미니게임</h2>
       <canvas
         ref={canvasRef}
@@ -655,9 +649,6 @@ export function MiniGame() {
         <div style={{ display: 'flex', gap: 14 }}>
           <span style={{ fontSize: 12, color: '#666', fontWeight: 800 }}>
             목숨: <b style={{ color: lifeColor }}>{lifeText}</b>
-          </span>
-          <span style={{ fontSize: 12, color: '#666', fontWeight: 800 }}>
-            점수: <b style={{ color: '#333' }}>{uiState.score}</b>
           </span>
         </div>
       </div>

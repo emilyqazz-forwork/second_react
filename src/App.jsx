@@ -4,7 +4,7 @@ import { GlobalNav } from './components/GlobalNav';
 import { GlobalSettingsModal } from './components/GlobalSettingsModal';
 import { AuthModal } from './components/AuthModal';
 import { Home } from './pages/Home';
-import { Play } from './pages/Play';
+import { Play } from './pages/Quiz';
 import { Note } from './pages/Note';
 import { Pattern } from './pages/Pattern';
 import { Result } from './pages/Result';
