@@ -16,6 +16,7 @@ export function Note({ t }) {
   const chatDisplayRef = useRef(null);
   const navigate = useNavigate();
 
+  /*전체 시도 기록 중 오답(isCorrect === false)만 골라내어 통계를 냅니다*/
   useEffect(() => {
     const allAttempts = getAttempts().filter(a => a && a.isCorrect === false);
     const countMap = {};
@@ -57,6 +58,7 @@ export function Note({ t }) {
     }
   };
 
+  /*사용자가 선택한 기준에 따라 오답 리스트를 실시간으로 가공해서 보여주는 함수입니다. 챕터별로 필터링하거나, 최신순/오래된 순/많이 틀린 순으로 정렬하는 기능을 담당합니다.*/
   const getFilteredAndSorted = () => {
     let filtered = activeChapter === "all" ? wrongItems : wrongItems.filter(a => String(a.chapter) === String(activeChapter));
     if (activeSort === "newest") filtered = [...filtered].sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
@@ -65,13 +67,16 @@ export function Note({ t }) {
     return filtered;
   };
 
+  /*문제의 유형과 챕터의 성격에 따라 맞춤형 조언을 제공하여 스스로 생각하게 만듭니다*/
+  /*기능이 완벽하지 않아서 수정해야함*/
+  <div className=""></div>
   const getWhyWrong = (attempt) => {
     if (attempt.type === 'ox') return "O/X 문제는 개념을 정확히 이해해야 해! 관련 내용을 다시 읽어보고 왜 그 답인지 이유를 말해볼 수 있어?";
     if (attempt.type === 'multiple') return "객관식은 오답 선택지가 왜 틀렸는지도 분석해봐! 헷갈린 선택지를 다시 비교해봐.";
     if (attempt.type === 'coding') return "코드 작성 문제야. 키워드가 빠지진 않았는지, 문법 오류는 없는지 한 줄씩 확인해봐!";
     return "틀린 부분을 다시 한 번 점검해봐!";
   };
-
+  /*기능이 완벽하지 않아서 수정해야함*/
   const getTip = (attempt) => {
     const ch = attempt.chapter;
     const type = attempt.type;
@@ -159,6 +164,7 @@ export function Note({ t }) {
         </div>
       </main>
 
+  /*기능이 완벽하지 않아서 수정해야함*/
       {/* AI 질문 모달 */}
       {aiModal && (
         <div className="modal-overlay" style={{ display: 'flex' }} onClick={(e) => { if (e.target === e.currentTarget) setAiModal(null); }}>
