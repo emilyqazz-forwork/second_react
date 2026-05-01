@@ -7,6 +7,7 @@ export function Home({ t }) {
   const [showQuizModal, setShowQuizModal] = useState(false);
   const [selectedChapter, setSelectedChapter] = useState(1);
   const [progress, setProgress] = useState({});
+  const [displayText, setDisplayText] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -35,6 +36,18 @@ export function Home({ t }) {
     setProgress(newProgress);
   }, []);
 
+  useEffect(() => {
+    const fullText = '초보 개발자를 위한 자바 코딩도우미';
+    let idx = 0;
+    setDisplayText('');
+    const timer = setInterval(() => {
+      idx += 1;
+      setDisplayText(fullText.slice(0, idx));
+      if (idx >= fullText.length) clearInterval(timer);
+    }, 80);
+    return () => clearInterval(timer);
+  }, []);
+
   const handleChapterClick = (ch) => {
     setSelectedChapter(ch);
     setShowChapterModal(false);
@@ -45,22 +58,28 @@ export function Home({ t }) {
     <div className="main-container" style={{ display: 'flex' }}>
       <header className="header">
         <h1 className="glow-title">{t('main_title')}</h1>
-        <p className="subtitle">{t('main_subtitle')}</p>
+        <p className="subtitle">{displayText}<span className="cursor">|</span></p>
       </header>
 
       <div className="button-wrapper">
-        <button className="btn-link" onClick={() => setShowChapterModal(true)} style={{background:'none', border:'none', cursor:'pointer', padding: 0}}>
-          <img src="/images/버튼_1.png" alt="문제풀기" />
-        </button>
-        <button className="btn-link" onClick={() => navigate('/note')} style={{background:'none', border:'none', cursor:'pointer', padding: 0}}>
-          <img src="/images/버튼_2.png" alt="오답노트" />
-        </button>
-        <button className="btn-link" onClick={() => navigate('/pattern')} style={{background:'none', border:'none', cursor:'pointer', padding: 0}}>
-          <img src="/images/버튼_3.png" alt="패턴분석" />
-        </button>
-        <button className="btn-link" onClick={() => navigate('/minigame')} style={{background:'none', border:'none', cursor:'pointer', padding: 0}}>
-          <img src="/images/버튼_4.png" alt="미니게임" />
-        </button>
+        <div className="btn-bar">
+          <button className="flat-btn" onClick={() => setShowChapterModal(true)}>
+            <span className="btn-icon">✏️</span>
+            문제풀기
+          </button>
+          <button className="flat-btn" onClick={() => navigate('/note')}>
+            <span className="btn-icon">📖</span>
+            오답노트
+          </button>
+          <button className="flat-btn" onClick={() => navigate('/pattern')}>
+            <span className="btn-icon">📊</span>
+            패턴분석
+          </button>
+          <button className="flat-btn" onClick={() => navigate('/minigame')}>
+            <span className="btn-icon">🎮</span>
+            미니게임
+          </button>
+        </div>
       </div>
 
       {showChapterModal && (

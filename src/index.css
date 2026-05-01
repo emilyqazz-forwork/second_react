@@ -1150,3 +1150,76 @@ body, html {
     width: 180px;   /* 100% → 고정값으로 변경 */
     height: auto; 
 }
+
+.wood-btn {
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    background: rgba(101, 67, 33, 0.35);
+    backdrop-filter: blur(8px);
+    border: 2px solid rgba(255, 220, 160, 0.5);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    transition: transform 0.3s;
+    color: #fff;
+    font-weight: 900;
+}
+
+.wood-btn:hover {
+    background: rgba(101, 67, 33, 0.55);
+    transform: translateY(-10px);
+}
+
+.wood-btn span:last-child {
+    color: #fff;
+    font-weight: 900;
+}
+
+.cursor {
+    display: inline-block;
+    margin-left: 6px;
+    animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+    50% { opacity: 0; }
+}
+
+.btn-bar {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  padding: 0 20px;
+  width: 100%;
+}
+
+.flat-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 22px;
+  background: rgba(93, 64, 55, 0.45);
+  border: 1.5px solid rgba(255, 220, 160, 0.5);
+  border-radius: 40px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+  backdrop-filter: blur(6px);
+  white-space: nowrap;
+  font-family: 'Jua', sans-serif;
+}
+
+.flat-btn:hover {
+  background: rgba(93, 64, 55, 0.75);
+  transform: translateY(-5px);
+}
+
+.btn-icon {
+  font-size: 18px;
+}
