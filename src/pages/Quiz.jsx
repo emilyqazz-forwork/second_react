@@ -164,7 +164,8 @@ export function Play({ t }) {
   if(!quizList.length) return <div style={{color:'white', padding: '50px'}}>Loading...</div>;
   const currentProblem = quizList[currentIndex];
   const savedUser = JSON.parse(localStorage.getItem('chickode_user') || 'null');
-  const nickname = savedUser ? savedUser.nickname : getProfile().name;
+  const rawNickname = savedUser ? savedUser.nickname : getProfile().name;
+  const nickname = rawNickname && rawNickname.includes('상우') ? '게스트' : rawNickname;
 
   return (
     <div className="coding-view" style={{ display: 'flex' }}>
