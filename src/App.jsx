@@ -6,7 +6,7 @@ import { GlobalNav } from './components/GlobalNav';               // 전역 네�
 import { GlobalSettingsModal } from './components/GlobalSettingsModal'; // 설정 모달
 import { AuthModal } from './components/AuthModal';               // 로그인/회원가입 모달
 import { Home } from './pages/Home';
-import { Play } from './pages/Quiz';    // ⚠️ 파일명은 Quiz.jsx, 컴포넌트명은 Play
+import { Quiz } from './pages/Quiz';    
 import { Note } from './pages/Note';
 import { Pattern } from './pages/Pattern';
 import { Result } from './pages/Result';
@@ -39,7 +39,7 @@ function App() {
       {/* 페이지 라우팅: URL 경로에 따라 다른 컴포넌트 렌더링 */}
       <Routes>
         <Route path="/"         element={<Home t={t} />} />
-        <Route path="/play"     element={<Play t={t} />} />     {/* pages/Quiz.jsx */}
+        <Route path="/quiz"     element={<Quiz t={t} />} />     {/* pages/Quiz.jsx */}
         <Route path="/note"     element={<Note t={t} />} />
         <Route path="/pattern"  element={<Pattern t={t} />} />
         <Route path="/result"   element={<Result t={t} />} />
