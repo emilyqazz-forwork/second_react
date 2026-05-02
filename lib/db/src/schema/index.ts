@@ -17,6 +17,6 @@
 //   export type InsertPost = z.infer<typeof insertPostSchema>;
 //   export type Post = typeof postsTable.$inferSelect;
 
-export * from "./conversations";
-export * from "./messages";
-export * from "./users";
+export * from "./conversations"; // 대화 테이블
+export * from "./messages"; // 메시지 테이블
+export * from "./users"; // 유저 테이블
