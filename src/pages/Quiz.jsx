@@ -11,7 +11,7 @@ import { oneDark } from '@codemirror/theme-one-dark';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-export function Play({ t }) {
+export function Quiz({ t }) {
   const location = useLocation();
   const navigate = useNavigate();
   const settings = location.state || { count: 10, ratio: 50, chapter: 1, difficulty: '중' };
