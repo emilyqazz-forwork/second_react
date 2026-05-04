@@ -11,7 +11,7 @@ import { Note } from './pages/Note';
 import { Pattern } from './pages/Pattern';
 import { Result } from './pages/Result';
 import { useI18n } from './state/i18n'; // 다국어 처리 훅
-import { MiniGame } from './pages/MiniGame';
+import { MiniGame } from './games/Jump';
 
 //사용자가 설정을 바꾸거나 로그인을 시도할 때 이 상태값들이 변화하며 화면을 업데이트한다. 
 function App() {
