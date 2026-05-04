@@ -1,83 +1,103 @@
-import { useState } from 'react';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+import React, { useState } from 'react';
+import { supabase } from '../supabaseClient'; 
 
 export function AuthModal({ onClose, t }) {
   const [tab, setTab] = useState('login');
-  const [loginId, setLoginId] = useState('');
-  const [loginPw, setLoginPw] = useState('');
-  const [regId, setRegId] = useState('');
-  const [regPw, setRegPw] = useState('');
-  const [regNickname, setRegNickname] = useState('');
-  const [loginMsg, setLoginMsg] = useState({ text: '', success: false });
-  const [registerMsg, setRegisterMsg] = useState({ text: '', success: false });
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [nickname, setNickname] = useState('');
+  const [message, setMessage] = useState({ text: '', success: false });
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = async () => {
+  const handleAuth = async (e) => {
+    if (e) e.preventDefault();
+    setLoading(true);
+    setMessage({ text: '', success: false });
+
     try {
-      const res = await fetch(`${API_URL}/login`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: loginId, password: loginPw })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setLoginMsg({ text: data.message, success: true });
-        localStorage.setItem('chickode_user', JSON.stringify({ username: loginId, nickname: data.nickname }));
-        setTimeout(() => { onClose(); window.location.reload(); }, 800);
+      if (tab === 'login') {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (error) throw error;
+        
+        setMessage({ text: '로그인 성공! 환영합니다.', success: true });
+        setTimeout(() => { onClose(); }, 1000);
       } else {
-        setLoginMsg({ text: data.message, success: false });
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { data: { nickname } }
+        });
+        if (error) throw error;
+
+        setMessage({ text: '가입 성공! 메일함을 확인해주세요.', success: true });
       }
-    } catch {
-      setLoginMsg({ text: '서버 오류!', success: false });
+    } catch (err) {
+      setMessage({ text: err.message, success: false });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleRegister = async () => {
-    try {
-      const res = await fetch(`${API_URL}/register`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: regId, password: regPw, nickname: regNickname })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setRegisterMsg({ text: data.message, success: true });
-        setTimeout(() => setTab('login'), 1000);
-      } else {
-        setRegisterMsg({ text: data.message, success: false });
-      }
-    } catch {
-      setRegisterMsg({ text: '서버 오류!', success: false });
-    }
+  const handleGoogleLogin = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { queryParams: { access_type: 'offline', prompt: 'consent' } }
+    });
+    if (error) alert("구글 로그인 실패: " + error.message);
   };
 
   return (
-    <div className="modal-overlay" style={{ display: 'flex' }}>
-      <div className="modal-content" style={{ width: '420px', textAlign: 'center' }}>
+    <div className="modal-overlay" style={{ display: 'flex' }} onClick={onClose}>
+      <div className="modal-content" style={{ width: '420px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
         <button className="close-btn" onClick={onClose}>&times;</button>
+        
         <div className="auth-tabs">
           <button className={`auth-tab ${tab === 'login' ? 'active' : ''}`} onClick={() => setTab('login')}>로그인</button>
           <button className={`auth-tab ${tab === 'register' ? 'active' : ''}`} onClick={() => setTab('register')}>회원가입</button>
         </div>
 
-        {tab === 'login' && (
-          <div className="auth-form">
-            <h2 className="modal-header">🐥 로그인</h2>
-            <input type="text" className="setting-input" placeholder="아이디" value={loginId} onChange={e => setLoginId(e.target.value)} style={{ width: '100%', marginBottom: '12px' }} />
-            <input type="password" className="setting-input" placeholder="비밀번호" value={loginPw} onChange={e => setLoginPw(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} style={{ width: '100%', marginBottom: '16px' }} />
-            <button className="clay-submit" onClick={handleLogin} style={{ width: '100%' }}>로그인</button>
-            {loginMsg.text && <p className="auth-msg" style={{ color: loginMsg.success ? '#55ff55' : '#ff5555' }}>{loginMsg.text}</p>}
-          </div>
-        )}
+        <form className="auth-form" onSubmit={handleAuth}>
+          <h2 className="modal-header">{tab === 'login' ? '🐥 로그인' : '🐣 회원가입'}</h2>
+          
+          <input 
+            type="email" className="setting-input" placeholder="이메일 주소" 
+            value={email} onChange={e => setEmail(e.target.value)} 
+            style={{ width: '100%', marginBottom: '12px' }} required 
+          />
+          <input 
+            type="password" className="setting-input" placeholder="비밀번호" 
+            value={password} onChange={e => setPassword(e.target.value)} 
+            style={{ width: '100%', marginBottom: '16px' }} required 
+          />
+          
+          {tab === 'register' && (
+            <input 
+              type="text" className="setting-input" placeholder="닉네임" 
+              value={nickname} onChange={e => setNickname(e.target.value)} 
+              style={{ width: '100%', marginBottom: '16px' }} required 
+            />
+          )}
 
-        {tab === 'register' && (
-          <div className="auth-form">
-            <h2 className="modal-header">🐣 회원가입</h2>
-            <input type="text" className="setting-input" placeholder="아이디 (3자 이상)" value={regId} onChange={e => setRegId(e.target.value)} style={{ width: '100%', marginBottom: '12px' }} />
-            <input type="password" className="setting-input" placeholder="비밀번호 (4자 이상)" value={regPw} onChange={e => setRegPw(e.target.value)} style={{ width: '100%', marginBottom: '12px' }} />
-            <input type="text" className="setting-input" placeholder="닉네임" value={regNickname} onChange={e => setRegNickname(e.target.value)} style={{ width: '100%', marginBottom: '16px' }} />
-            <button className="clay-submit" onClick={handleRegister} style={{ width: '100%' }}>가입하기</button>
-            {registerMsg.text && <p className="auth-msg" style={{ color: registerMsg.success ? '#55ff55' : '#ff5555' }}>{registerMsg.text}</p>}
-          </div>
-        )}
+          <button className="clay-submit" type="submit" style={{ width: '100%' }} disabled={loading}>
+            {loading ? '처리 중...' : tab === 'login' ? '로그인' : '가입하기'}
+          </button>
+          
+          {message.text && (
+            <p className="auth-msg" style={{ color: message.success ? '#2e7d32' : '#c62828', marginTop: '10px' }}>
+              {message.text}
+            </p>
+          )}
+        </form>
+
+        <div style={{ margin: '20px 0', color: '#8d6e63', fontSize: '14px' }}>또는</div>
+
+        <button onClick={handleGoogleLogin} className="chapter-item" style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18" alt="Google" />
+          구글 계정으로 시작하기
+        </button>
       </div>
     </div>
   );
