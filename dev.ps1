@@ -1,6 +1,12 @@
+<<<<<<< Updated upstream
 # 백엔드(FastAPI)와 프론트엔드(React)를 동시에 띄워주는 개발용 실행 스크립트
 
 # 실행 시 포트/주소를 바꿀 수 있는 매개변수 (기본값 설정)
+=======
+//개발 실행을 편하게 해주는 PowerShell 스크립트
+//삭제해도 상관없음.
+
+>>>>>>> Stashed changes
 param(
   [int]$ApiPort = 8000,       # FastAPI 백엔드 포트
   [int]$WebPort = 5173,       # React 프론트엔드 포트 (Vite 기본값)

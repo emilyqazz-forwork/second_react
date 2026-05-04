@@ -1,3 +1,7 @@
+/*사용자가 지금까지 풀어본 문제들의 패턴을 분석해서 보여주는 페이지입니다. 챕터별, 유형별로 얼마나 맞췄는지 시각적으로 보여주고, 특히 취약한 챕터를 콕 집어서 다시 풀어볼 수 있게 유도하는 기능이 핵심입니다.*/
+/*전체 삭제 후 다시 만들거나 수정필요*/
+
+
 import { useNavigate } from 'react-router-dom';
 import { getAttempts, summarizeAttempts } from '../state/app-state';
 

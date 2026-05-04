@@ -1,3 +1,4 @@
+//TypeScript를 자바스크립트로 변환(컴파일)할 때 "어떤 규칙을 적용할 것인가"를 결정하는 일종의 설명서라고 보시면 됩니다
 {
   "compilerOptions": {
     "isolatedModules": true,

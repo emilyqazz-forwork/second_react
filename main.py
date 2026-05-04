@@ -1,3 +1,7 @@
+##FastAPI를 사용하여 구축된 '병아리 선배' 컨셉의 코딩 멘토 백엔드 서버입니다. 
+##Google의 Gemini AI를 활용해 사용자에게 힌트를 주거나 채팅을 하며,
+##기본적인 회원가입/로그인 기능을 갖추고 있습니다.
+
 import os
 import json
 import hashlib

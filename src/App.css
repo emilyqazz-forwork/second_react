@@ -1,3 +1,4 @@
+/* 카운터 스타일 */
 .counter {
   font-size: 16px;
   padding: 5px 10px;
@@ -8,7 +9,8 @@
   transition: border-color 0.3s;
   margin-bottom: 24px;
 
-  &:hover {
+  /*마우스 올리면 테두리 색이 부드럽게 변함.*/
+  &:hover { 
     border-color: var(--accent-border);
   }
   &:focus-visible {
@@ -16,7 +18,7 @@
     outline-offset: 2px;
   }
 }
-
+/* 히어로 섹션 스타일 입체적이게 */
 .hero {
   position: relative;
 
@@ -56,6 +58,7 @@
   }
 }
 
+/* 중앙정렬 레이아웃 */
 #center {
   display: flex;
   flex-direction: column;
@@ -70,6 +73,7 @@
   }
 }
 
+/* 모바일 최적화 */
 #next-steps {
   display: flex;
   border-top: 1px solid var(--border);
@@ -95,6 +99,7 @@
   }
 }
 
+/* 문서와 다음 단계 섹션을 구분하는 스타일 */
 #docs {
   border-right: 1px solid var(--border);
 
@@ -104,6 +109,7 @@
   }
 }
 
+/* 시각적요소 */
 #next-steps ul {
   list-style: none;
   padding: 0;
