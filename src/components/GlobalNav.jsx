@@ -56,7 +56,7 @@ export function GlobalNav({ onOpenSettings, onOpenAuth, t }) {
               /minigame - 미니게임 */}
           <ul className="nav-links">
             <li><Link to="/">{t('nav_home')}</Link></li>
-            <li><Link to="/quiz">{t('nav_quiz')}</Link></li>
+            <li><Link to="/quiz">문제풀기</Link></li>
             <li><Link to="/note">{t('nav_note')}</Link></li>
             <li><Link to="/pattern">{t('nav_pattern') || "패턴분석"}</Link></li>
             <li><Link to="/minigame">{t('nav_minigame')}</Link></li>

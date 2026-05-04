@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import BugGame from './BugGame'
+import { MiniGame as StairGame } from './StairGame'
 
 const W = 960;
 const H = 340;
@@ -113,6 +115,7 @@ export function MiniGame() {
   const rafRef = useRef(null);
   const lastUiStateRef = useRef(null);
   const answerQuizRef = useRef(null);
+  const [activeTab, setActiveTab] = useState('obstacle');
   const gameRef = useRef({
     stageIdx: 0,
     state: 'idle',
@@ -621,85 +624,156 @@ export function MiniGame() {
 
   return (
     <div style={{ fontFamily: 'Noto Sans KR, sans-serif', maxWidth: 980, margin: '40px auto', padding: '0 16px' }}>
-      <h2 style={{ marginBottom: 12, fontSize: 20, fontWeight: 900 }}>자바 퀴즈 미니게임</h2>
-      <canvas
-        ref={canvasRef}
-        width={W}
-        height={H}
-        style={{ display: 'block', width: '100%', borderRadius: 12, border: '1px solid #e0e0e0', cursor: 'pointer' }}
-      />
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 2px 0' }}>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <span
-            style={{
-              fontSize: 12,
-              fontWeight: 900,
-              padding: '2px 10px',
-              borderRadius: 20,
-              background: `${uiState.color}33`,
-              color: uiState.color,
-            }}
-          >
-            {uiState.stage}
-          </span>
-          <span style={{ fontSize: 12, color: '#666', fontWeight: 800 }}>
-            진행: <b style={{ color: '#333' }}>{uiState.prog}%</b>
-          </span>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+        <button
+          type="button"
+          onClick={() => setActiveTab('obstacle')}
+          style={{
+            padding: '8px 12px',
+            borderRadius: 10,
+            border: '1px solid #e0e0e0',
+            background: activeTab === 'obstacle' ? '#111' : '#fff',
+            color: activeTab === 'obstacle' ? '#fff' : '#111',
+            fontWeight: 900,
+            cursor: 'pointer',
+          }}
+        >
+          🐥 장애물피하기
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('bug')}
+          style={{
+            padding: '8px 12px',
+            borderRadius: 10,
+            border: '1px solid #e0e0e0',
+            background: activeTab === 'bug' ? '#111' : '#fff',
+            color: activeTab === 'bug' ? '#fff' : '#111',
+            fontWeight: 900,
+            cursor: 'pointer',
+          }}
+        >
+          🪲 벌레잡기
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('stair')}
+          style={{
+            padding: '8px 12px',
+            borderRadius: 10,
+            border: '1px solid #e0e0e0',
+            background: activeTab === 'stair' ? '#111' : '#fff',
+            color: activeTab === 'stair' ? '#fff' : '#111',
+            fontWeight: 900,
+            cursor: 'pointer',
+          }}
+        >
+          🪜 계단오르기
+        </button>
+      </div>
+
+      <div style={{ display: activeTab === 'obstacle' ? 'block' : 'none' }}>
+        <h2 style={{ marginBottom: 12, fontSize: 20, fontWeight: 900 }}>자바 퀴즈 미니게임</h2>
+        <div style={{ position: 'relative' }}>
+          <canvas
+            ref={canvasRef}
+            width={W}
+            height={H}
+            style={{ display: 'block', width: '100%', borderRadius: 12, border: '1px solid #e0e0e0', cursor: 'pointer' }}
+          />
+
+          {quizState.visible && (
+            <div
+              style={{
+                position: 'absolute',
+                inset: 12,
+                background: 'rgba(255,255,255,0.9)',
+                borderRadius: 12,
+                border: '1px solid #e0e0e0',
+                padding: '14px 18px',
+                overflow: 'auto',
+                maxHeight: H - 24,
+              }}
+            >
+              <div style={{ fontSize: 13, color: '#555', marginBottom: 8, fontWeight: 900 }}>이 Java 코드의 출력 결과는?</div>
+              <pre
+                style={{
+                  fontFamily: 'Consolas, monospace',
+                  fontSize: 13,
+                  background: '#fff',
+                  padding: '10px 14px',
+                  borderRadius: 8,
+                  border: '1px solid #e0e0e0',
+                  color: '#333',
+                  lineHeight: 1.6,
+                  margin: '0 0 12px 0',
+                  whiteSpace: 'pre-wrap',
+                }}
+              >
+                {quizState.code}
+              </pre>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {quizState.opts.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    disabled={quizState.locked}
+                    onClick={() => answerQuizRef.current?.(option)}
+                    style={{
+                      padding: '7px 16px',
+                      borderRadius: 8,
+                      border: '1px solid #bbb',
+                      background: quizState.locked ? '#eee' : '#fff',
+                      color: '#333',
+                      fontSize: 12,
+                      cursor: quizState.locked ? 'default' : 'pointer',
+                      fontFamily: 'Consolas, monospace',
+                      fontWeight: 900,
+                    }}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+              {quizState.feedback && (
+                <div style={{ marginTop: 10, fontSize: 13, fontWeight: 900, color: quizState.feedbackColor }}>{quizState.feedback}</div>
+              )}
+            </div>
+          )}
         </div>
-        <div style={{ display: 'flex', gap: 14 }}>
-          <span style={{ fontSize: 12, color: '#666', fontWeight: 800 }}>
-            목숨: <b style={{ color: lifeColor }}>{lifeText}</b>
-          </span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 2px 0' }}>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            <span
+              style={{
+                fontSize: 12,
+                fontWeight: 900,
+                padding: '2px 10px',
+                borderRadius: 20,
+                background: `${uiState.color}33`,
+                color: uiState.color,
+              }}
+            >
+              {uiState.stage}
+            </span>
+            <span style={{ fontSize: 12, color: '#666', fontWeight: 800 }}>
+              진행: <b style={{ color: '#333' }}>{uiState.prog}%</b>
+            </span>
+          </div>
+          <div style={{ display: 'flex', gap: 14 }}>
+            <span style={{ fontSize: 12, color: '#666', fontWeight: 800 }}>
+              목숨: <b style={{ color: lifeColor }}>{lifeText}</b>
+            </span>
+          </div>
         </div>
       </div>
 
-      {quizState.visible && (
-        <div style={{ marginTop: 12, background: '#f8f8f8', borderRadius: 12, padding: '14px 18px', border: '1px solid #e0e0e0' }}>
-          <div style={{ fontSize: 13, color: '#555', marginBottom: 8, fontWeight: 900 }}>이 Java 코드의 출력 결과는?</div>
-          <pre
-            style={{
-              fontFamily: 'Consolas, monospace',
-              fontSize: 13,
-              background: '#fff',
-              padding: '10px 14px',
-              borderRadius: 8,
-              border: '1px solid #e0e0e0',
-              color: '#333',
-              lineHeight: 1.6,
-              margin: '0 0 12px 0',
-              whiteSpace: 'pre-wrap',
-            }}
-          >
-            {quizState.code}
-          </pre>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {quizState.opts.map((option) => (
-              <button
-                key={option}
-                type="button"
-                disabled={quizState.locked}
-                onClick={() => answerQuizRef.current?.(option)}
-                style={{
-                  padding: '7px 16px',
-                  borderRadius: 8,
-                  border: '1px solid #bbb',
-                  background: quizState.locked ? '#eee' : '#fff',
-                  color: '#333',
-                  fontSize: 12,
-                  cursor: quizState.locked ? 'default' : 'pointer',
-                  fontFamily: 'Consolas, monospace',
-                  fontWeight: 900,
-                }}
-              >
-                {option}
-              </button>
-            ))}
-          </div>
-          {quizState.feedback && (
-            <div style={{ marginTop: 10, fontSize: 13, fontWeight: 900, color: quizState.feedbackColor }}>{quizState.feedback}</div>
-          )}
-        </div>
-      )}
+      <div style={{ display: activeTab === 'bug' ? 'block' : 'none' }}>
+        <BugGame />
+      </div>
+
+      <div style={{ display: activeTab === 'stair' ? 'block' : 'none' }}>
+        <StairGame />
+      </div>
     </div>
   );
 }
