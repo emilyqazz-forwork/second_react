@@ -2,16 +2,16 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAttempts } from '../state/app-state';
 
-// 챕터 데이터
+// 챕터 데이터 - 난이도별(basic/mid/adv) 챕터 목록
 const JAVA_CHAPTERS = {
   basic: [
     { id: 1, key: 'java_basic_1' },
     { id: 2, key: 'java_basic_2' },
   ],
- mid: [
-  { id: 3, key: 'java_mid_1' },
-  { id: 4, key: 'java_mid_2' },
-],
+  mid: [
+    { id: 3, key: 'java_mid_1' },
+    { id: 4, key: 'java_mid_2' },
+  ],
   adv: [
     { id: 1, key: 'java_adv_1' },
     { id: 2, key: 'java_adv_2' },
@@ -19,28 +19,33 @@ const JAVA_CHAPTERS = {
 };
 
 export function Home({ t }) {
+  // step: 현재 어떤 모달을 보여줄지 관리 (null이면 모달 없음)
   const [step, setStep] = useState(null); // null | 'lang' | 'level' | 'chapter' | 'setting'
-  const [selectedLang, setSelectedLang] = useState(null);
-  const [selectedLevel, setSelectedLevel] = useState(null);
-  const [selectedChapter, setSelectedChapter] = useState(null);
-  const [progress, setProgress] = useState({});
-  const [displayText, setDisplayText] = useState('');
+  const [selectedLang, setSelectedLang] = useState(null);     // 선택한 언어 (java, python 등)
+  const [selectedLevel, setSelectedLevel] = useState(null);   // 선택한 난이도 (basic, mid, adv)
+  const [selectedChapter, setSelectedChapter] = useState(null); // 선택한 챕터 번호
+  const [progress, setProgress] = useState({});               // 챕터별 진도율 (0~100%)
+  const [displayText, setDisplayText] = useState('');         // 타이핑 애니메이션 텍스트
   const navigate = useNavigate();
 
+  // 챕터별 진도율 계산
   useEffect(() => {
-    const attempts = getAttempts();
-    const totalByChapter = { 1: 13, 2: 13, 3: 13, 4: 13 };
+    const attempts = getAttempts(); // 저장된 풀이 기록 가져오기
+    const totalByChapter = { 1: 13, 2: 13, 3: 13, 4: 13 }; // 챕터별 총 문제 수
     const correctByChapter = {};
-    const seenProblems = {};
+    const seenProblems = {}; // 같은 문제 중복 카운트 방지용
+
     for (const a of attempts) {
-      if (!a.isCorrect) continue;
+      if (!a.isCorrect) continue; // 틀린 문제는 건너뜀
       const ch = a.chapter;
       const pid = a.problemId || a.title;
       if (!seenProblems[pid]) {
         seenProblems[pid] = true;
-        correctByChapter[ch] = (correctByChapter[ch] || 0) + 1;
+        correctByChapter[ch] = (correctByChapter[ch] || 0) + 1; // 챕터별 정답 수 누적
       }
     }
+
+    // 챕터별 진도율 계산 (정답수 / 총문제수 * 100, 최대 100%)
     const newProgress = {};
     [1, 2, 3, 4].forEach(ch => {
       const total = totalByChapter[ch] || 1;
@@ -50,6 +55,7 @@ export function Home({ t }) {
     setProgress(newProgress);
   }, []);
 
+  // 타이핑 애니메이션 - 한 글자씩 80ms마다 추가
   useEffect(() => {
     const fullText = '초보 개발자를 위한 자바 코딩도우미';
     let idx = 0;
@@ -57,11 +63,12 @@ export function Home({ t }) {
     const timer = setInterval(() => {
       idx += 1;
       setDisplayText(fullText.slice(0, idx));
-      if (idx >= fullText.length) clearInterval(timer);
+      if (idx >= fullText.length) clearInterval(timer); // 다 출력되면 타이머 종료
     }, 80);
-    return () => clearInterval(timer);
+    return () => clearInterval(timer); // 컴포넌트 언마운트 시 타이머 정리
   }, []);
 
+  // 모달 전체 닫기 및 선택값 초기화
   const closeAll = () => {
     setStep(null);
     setSelectedLang(null);
@@ -73,9 +80,11 @@ export function Home({ t }) {
     <div className="main-container" style={{ display: 'flex' }}>
       <header className="header">
         <h1 className="glow-title">{t('main_title')}</h1>
+        {/* 타이핑 애니메이션 텍스트 + 깜빡이는 커서 */}
         <p className="subtitle">{displayText}<span className="cursor">|</span></p>
       </header>
 
+      {/* 메인 버튼 메뉴 */}
       <div className="button-wrapper">
         <div className="btn-bar">
           <button className="flat-btn" onClick={() => setStep('lang')}>
@@ -97,54 +106,57 @@ export function Home({ t }) {
         </div>
       </div>
 
-      {/* 언어 선택 */}
+      {/* step 상태에 따라 해당 모달만 렌더링 */}
+
+      {/* 1단계: 언어 선택 모달 */}
       {step === 'lang' && (
         <LangModal
           t={t}
           onClose={closeAll}
           onSelect={(lang) => {
             setSelectedLang(lang);
-            setStep('level');
+            setStep('level'); // 언어 선택 후 난이도 선택으로 이동
           }}
         />
       )}
 
-      {/* 난이도 선택 */}
+      {/* 2단계: 난이도 선택 모달 */}
       {step === 'level' && (
         <LevelModal
           t={t}
           onClose={closeAll}
-          onBack={() => setStep('lang')}
+          onBack={() => setStep('lang')} // 이전 버튼 누르면 언어 선택으로 돌아감
           onSelect={(level) => {
             setSelectedLevel(level);
-            setStep('chapter');
+            setStep('chapter'); // 난이도 선택 후 챕터 선택으로 이동
           }}
         />
       )}
 
-      {/* 챕터 선택 */}
+      {/* 3단계: 챕터 선택 모달 */}
       {step === 'chapter' && (
         <ChapterModal
           t={t}
           level={selectedLevel}
           progress={progress}
           onClose={closeAll}
-          onBack={() => setStep('level')}
+          onBack={() => setStep('level')} // 이전 버튼 누르면 난이도 선택으로 돌아감
           onSelect={(chapter) => {
             setSelectedChapter(chapter);
-            setStep('setting');
+            setStep('setting'); // 챕터 선택 후 퀴즈 설정으로 이동
           }}
         />
       )}
 
-      {/* 퀴즈 설정 */}
+      {/* 4단계: 퀴즈 설정 모달 */}
       {step === 'setting' && (
         <QuizSettingModal
           t={t}
           onClose={closeAll}
-          onBack={() => setStep('chapter')}
+          onBack={() => setStep('chapter')} // 이전 버튼 누르면 챕터 선택으로 돌아감
           onStart={(settings) => {
             closeAll();
+            // 퀴즈 시작 - 설정값과 챕터 정보를 가지고 /play 페이지로 이동
             navigate('/play', { state: { ...settings, chapter: selectedChapter } });
           }}
         />
@@ -153,12 +165,12 @@ export function Home({ t }) {
   );
 }
 
-// 언어 선택 모달
+// 언어 선택 모달 컴포넌트
 function LangModal({ t, onClose, onSelect }) {
   const langs = [
     { id: 'java', label: 'Java', emoji: '☕', ready: true },
-    { id: 'python', label: 'Python', emoji: '🐍', ready: false },
-    { id: 'c', label: 'C언어', emoji: '⚙️', ready: false },
+    { id: 'python', label: 'Python', emoji: '🐍', ready: false }, // 준비중
+    { id: 'c', label: 'C언어', emoji: '⚙️', ready: false },       // 준비중
   ];
 
   return (
@@ -171,6 +183,7 @@ function LangModal({ t, onClose, onSelect }) {
             <div
               key={lang.id}
               className="chapter-item"
+              // 준비중인 언어는 클릭 불가 (opacity 0.5, cursor not-allowed)
               style={{ opacity: lang.ready ? 1 : 0.5, cursor: lang.ready ? 'pointer' : 'not-allowed', justifyContent: 'space-between' }}
               onClick={() => lang.ready && onSelect(lang.id)}
             >
@@ -184,7 +197,7 @@ function LangModal({ t, onClose, onSelect }) {
   );
 }
 
-// 난이도 선택 모달
+// 난이도 선택 모달 컴포넌트
 function LevelModal({ t, onClose, onBack, onSelect }) {
   const levels = [
     { id: 'basic', label: t('level_basic'), emoji: '🌱' },
@@ -214,8 +227,9 @@ function LevelModal({ t, onClose, onBack, onSelect }) {
   );
 }
 
-// 챕터 선택 모달
+// 챕터 선택 모달 컴포넌트
 function ChapterModal({ t, level, progress, onClose, onBack, onSelect }) {
+  // 선택한 난이도에 해당하는 챕터 목록 가져오기
   const chapters = JAVA_CHAPTERS[level] || [];
 
   return (
@@ -231,6 +245,7 @@ function ChapterModal({ t, level, progress, onClose, onBack, onSelect }) {
               onClick={() => onSelect(ch.id)}
             >
               <span className="ch-title">{t(ch.key)}</span>
+              {/* 챕터별 진도율 프로그레스바 */}
               <div className="progress-bar-container">
                 <div className="progress-bar" style={{ width: `${progress[ch.id] || 0}%` }}></div>
               </div>
@@ -243,11 +258,11 @@ function ChapterModal({ t, level, progress, onClose, onBack, onSelect }) {
   );
 }
 
-// 퀴즈 설정 모달
+// 퀴즈 설정 모달 컴포넌트
 function QuizSettingModal({ t, onClose, onBack, onStart }) {
-  const [ratio, setRatio] = useState(50);
-  const [count, setCount] = useState(10);
-  const [difficulty, setDifficulty] = useState('중');
+  const [ratio, setRatio] = useState(50);           // 객관식/주관식 비율 (기본 50:50)
+  const [count, setCount] = useState(10);           // 문제 수 (기본 10개)
+  const [difficulty, setDifficulty] = useState('중'); // 난이도 (기본 중)
 
   return (
     <div className="modal-overlay" style={{ display: 'flex' }}>
@@ -255,6 +270,7 @@ function QuizSettingModal({ t, onClose, onBack, onStart }) {
         <button className="close-btn" onClick={onClose}>&times;</button>
         <h2 className="modal-header">{t('modal_quiz_title')}</h2>
         <div className="setting-form">
+          {/* 객관식/주관식 비율 슬라이더 */}
           <div className="setting-group">
             <label>{t('quiz_ratio')}</label>
             <div className="range-slider-wrapper">
@@ -263,10 +279,12 @@ function QuizSettingModal({ t, onClose, onBack, onStart }) {
               <span><span>{t('quiz_subj')}</span> {100 - ratio}%</span>
             </div>
           </div>
+          {/* 문제 수 입력 */}
           <div className="setting-group">
             <label>{t('quiz_count')}</label>
             <input type="number" min="1" max="20" value={count} onChange={(e) => setCount(Number(e.target.value))} className="setting-input" />
           </div>
+          {/* 난이도 선택 */}
           <div className="setting-group">
             <label>{t('quiz_diff')}</label>
             <select className="setting-select" value={difficulty} onChange={(e) => setDifficulty(e.target.value)}>
@@ -275,6 +293,7 @@ function QuizSettingModal({ t, onClose, onBack, onStart }) {
               <option value="상">{t('diff_hard')}</option>
             </select>
           </div>
+          {/* 퀴즈 시작 버튼 - 설정값을 onStart에 전달 */}
           <button
             className="clay-submit"
             onClick={() => onStart({ ratio, count, difficulty })}
