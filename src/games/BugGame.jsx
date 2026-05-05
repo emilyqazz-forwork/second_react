@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import './BugGame.css';
+//import './BugGame.css';
 
 export default function BugGame() {
   const containerRef = useRef(null);

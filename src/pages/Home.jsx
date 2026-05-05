@@ -2,21 +2,41 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAttempts } from '../state/app-state';
 
+// 챕터 데이터
+const JAVA_CHAPTERS = {
+  basic: [
+    // problems.js 챕터 id(1~4)에 맞춰 매핑
+    { id: 1, key: 'java_basic_1' },
+    { id: 1, key: 'java_basic_2' },
+    { id: 2, key: 'java_basic_3' },
+    { id: 2, key: 'java_basic_4' },
+  ],
+  mid: [
+    { id: 3, key: 'java_mid_1' },
+    { id: 3, key: 'java_mid_2' },
+    { id: 4, key: 'java_mid_3' },
+    { id: 4, key: 'java_mid_4' },
+  ],
+  adv: [
+    { id: 1, key: 'java_adv_1' },
+    { id: 2, key: 'java_adv_2' },
+  ],
+};
+
 export function Home({ t }) {
-  const [showChapterModal, setShowChapterModal] = useState(false);
-  const [showQuizModal, setShowQuizModal] = useState(false);
-  const [selectedChapter, setSelectedChapter] = useState(1);
+  const [step, setStep] = useState(null); // null | 'lang' | 'level' | 'chapter' | 'setting'
+  const [selectedLang, setSelectedLang] = useState(null);
+  const [selectedLevel, setSelectedLevel] = useState(null);
+  const [selectedChapter, setSelectedChapter] = useState(null);
   const [progress, setProgress] = useState({});
   const [displayText, setDisplayText] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Calculate progress
     const attempts = getAttempts();
     const totalByChapter = { 1: 13, 2: 13, 3: 13, 4: 13 };
     const correctByChapter = {};
     const seenProblems = {};
-    
     for (const a of attempts) {
       if (!a.isCorrect) continue;
       const ch = a.chapter;
@@ -26,7 +46,6 @@ export function Home({ t }) {
         correctByChapter[ch] = (correctByChapter[ch] || 0) + 1;
       }
     }
-    
     const newProgress = {};
     [1, 2, 3, 4].forEach(ch => {
       const total = totalByChapter[ch] || 1;
@@ -48,10 +67,11 @@ export function Home({ t }) {
     return () => clearInterval(timer);
   }, []);
 
-  const handleChapterClick = (ch) => {
-    setSelectedChapter(ch);
-    setShowChapterModal(false);
-    setShowQuizModal(true);
+  const closeAll = () => {
+    setStep(null);
+    setSelectedLang(null);
+    setSelectedLevel(null);
+    setSelectedChapter(null);
   };
 
   return (
@@ -63,7 +83,7 @@ export function Home({ t }) {
 
       <div className="button-wrapper">
         <div className="btn-bar">
-          <button className="flat-btn" onClick={() => setShowChapterModal(true)}>
+          <button className="flat-btn" onClick={() => setStep('lang')}>
             <span className="btn-icon">✏️</span>
             문제풀기
           </button>
@@ -82,22 +102,54 @@ export function Home({ t }) {
         </div>
       </div>
 
-      {showChapterModal && (
-        <ChapterModal 
-          onClose={() => setShowChapterModal(false)} 
-          onSelect={handleChapterClick} 
-          progress={progress} 
-          t={t} 
+      {/* 언어 선택 */}
+      {step === 'lang' && (
+        <LangModal
+          t={t}
+          onClose={closeAll}
+          onSelect={(lang) => {
+            setSelectedLang(lang);
+            setStep('level');
+          }}
         />
       )}
-      
-      {showQuizModal && (
-        <QuizSettingModal 
-          onClose={() => setShowQuizModal(false)}
-          chapter={selectedChapter}
+
+      {/* 난이도 선택 */}
+      {step === 'level' && (
+        <LevelModal
           t={t}
+          onClose={closeAll}
+          onBack={() => setStep('lang')}
+          onSelect={(level) => {
+            setSelectedLevel(level);
+            setStep('chapter');
+          }}
+        />
+      )}
+
+      {/* 챕터 선택 */}
+      {step === 'chapter' && (
+        <ChapterModal
+          t={t}
+          level={selectedLevel}
+          progress={progress}
+          onClose={closeAll}
+          onBack={() => setStep('level')}
+          onSelect={(chapter) => {
+            setSelectedChapter(chapter);
+            setStep('setting');
+          }}
+        />
+      )}
+
+      {/* 퀴즈 설정 */}
+      {step === 'setting' && (
+        <QuizSettingModal
+          t={t}
+          onClose={closeAll}
+          onBack={() => setStep('chapter')}
           onStart={(settings) => {
-            setShowQuizModal(false);
+            closeAll();
             navigate('/play', { state: { ...settings, chapter: selectedChapter } });
           }}
         />
@@ -106,38 +158,98 @@ export function Home({ t }) {
   );
 }
 
-function ChapterModal({ onClose, onSelect, progress, t }) {
+// 언어 선택 모달
+function LangModal({ t, onClose, onSelect }) {
+  const langs = [
+    { id: 'java', label: 'Java', emoji: '☕', ready: true },
+    { id: 'python', label: 'Python', emoji: '🐍', ready: false },
+    { id: 'c', label: 'C언어', emoji: '⚙️', ready: false },
+  ];
+
   return (
     <div className="modal-overlay" style={{ display: 'flex' }}>
       <div className="modal-content">
         <button className="close-btn" onClick={onClose}>&times;</button>
-        <h2 className="modal-header">{t('modal_chapter_title')}</h2>
+        <h2 className="modal-header">{t('modal_lang_title')}</h2>
         <div className="chapter-list">
-          <h3 className="chapter-group-title">{t('ch1_group')}</h3>
-          <div className="chapter-item" onClick={() => onSelect(1)}>
-            <span className="ch-title">{t('ch1_1')}</span>
-            <div className="progress-bar-container"><div className="progress-bar" style={{ width: `${progress[1] || 0}%` }}></div></div>
-          </div>
-          <div className="chapter-item" onClick={() => onSelect(2)}>
-            <span className="ch-title">{t('ch1_2')}</span>
-            <div className="progress-bar-container"><div className="progress-bar" style={{ width: `${progress[2] || 0}%` }}></div></div>
-          </div>
-          <h3 className="chapter-group-title">{t('ch2_group')}</h3>
-          <div className="chapter-item" onClick={() => onSelect(3)}>
-            <span className="ch-title">{t('ch2_1')}</span>
-            <div className="progress-bar-container"><div className="progress-bar" style={{ width: `${progress[3] || 0}%` }}></div></div>
-          </div>
-          <div className="chapter-item" onClick={() => onSelect(4)}>
-            <span className="ch-title">{t('ch2_2')}</span>
-            <div className="progress-bar-container"><div className="progress-bar" style={{ width: `${progress[4] || 0}%` }}></div></div>
-          </div>
+          {langs.map(lang => (
+            <div
+              key={lang.id}
+              className="chapter-item"
+              style={{ opacity: lang.ready ? 1 : 0.5, cursor: lang.ready ? 'pointer' : 'not-allowed', justifyContent: 'space-between' }}
+              onClick={() => lang.ready && onSelect(lang.id)}
+            >
+              <span className="ch-title">{lang.emoji} {lang.label}</span>
+              {!lang.ready && <span style={{ fontSize: 12, color: '#aaa' }}>준비중</span>}
+            </div>
+          ))}
         </div>
       </div>
     </div>
   );
 }
 
-function QuizSettingModal({ onClose, onStart, t }) {
+// 난이도 선택 모달
+function LevelModal({ t, onClose, onBack, onSelect }) {
+  const levels = [
+    { id: 'basic', label: t('level_basic'), emoji: '🌱' },
+    { id: 'mid', label: t('level_mid'), emoji: '🌿' },
+    { id: 'adv', label: t('level_adv'), emoji: '🌳' },
+  ];
+
+  return (
+    <div className="modal-overlay" style={{ display: 'flex' }}>
+      <div className="modal-content">
+        <button className="close-btn" onClick={onClose}>&times;</button>
+        <h2 className="modal-header">{t('modal_level_title')}</h2>
+        <div className="chapter-list">
+          {levels.map(level => (
+            <div
+              key={level.id}
+              className="chapter-item"
+              onClick={() => onSelect(level.id)}
+            >
+              <span className="ch-title">{level.emoji} {level.label}</span>
+            </div>
+          ))}
+        </div>
+        <button onClick={onBack} style={{ marginTop: 12, background: 'transparent', border: 'none', color: '#aaa', cursor: 'pointer', fontSize: 13 }}>← 이전</button>
+      </div>
+    </div>
+  );
+}
+
+// 챕터 선택 모달
+function ChapterModal({ t, level, progress, onClose, onBack, onSelect }) {
+  const chapters = JAVA_CHAPTERS[level] || [];
+
+  return (
+    <div className="modal-overlay" style={{ display: 'flex' }}>
+      <div className="modal-content">
+        <button className="close-btn" onClick={onClose}>&times;</button>
+        <h2 className="modal-header">{t('modal_chapter_title')}</h2>
+        <div className="chapter-list">
+          {chapters.map(ch => (
+            <div
+              key={ch.id}
+              className="chapter-item"
+              onClick={() => onSelect(ch.id)}
+            >
+              <span className="ch-title">{t(ch.key)}</span>
+              <div className="progress-bar-container">
+                <div className="progress-bar" style={{ width: `${progress[ch.id] || 0}%` }}></div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <button onClick={onBack} style={{ marginTop: 12, background: 'transparent', border: 'none', color: '#aaa', cursor: 'pointer', fontSize: 13 }}>← 이전</button>
+      </div>
+    </div>
+  );
+}
+
+// 퀴즈 설정 모달
+function QuizSettingModal({ t, onClose, onBack, onStart }) {
   const [ratio, setRatio] = useState(50);
   const [count, setCount] = useState(10);
   const [difficulty, setDifficulty] = useState('중');
@@ -168,14 +280,15 @@ function QuizSettingModal({ onClose, onStart, t }) {
               <option value="상">{t('diff_hard')}</option>
             </select>
           </div>
-          <button 
-            className="clay-submit" 
+          <button
+            className="clay-submit"
             onClick={() => onStart({ ratio, count, difficulty })}
             style={{ width: '100%', marginTop: '15px' }}
           >
             {t('btn_start_quiz')}
           </button>
         </div>
+        <button onClick={onBack} style={{ marginTop: 12, background: 'transparent', border: 'none', color: '#aaa', cursor: 'pointer', fontSize: 13 }}>← 이전</button>
       </div>
     </div>
   );
