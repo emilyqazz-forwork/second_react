@@ -10,6 +10,21 @@ export const translations = {
         nav_minigame: "미니게임",
         main_title: "CHICKODE",
         main_subtitle: "초보 개발자를 위한 자바 코딩도우미",
+        modal_lang_title: "언어 선택",
+        modal_level_title: "난이도 선택",
+        level_basic: "기초",
+        level_mid: "중급",
+        level_adv: "고급",
+        java_basic_1: "변수와 자료형",
+        java_basic_2: "연산자와 표현식",
+        java_basic_3: "조건문과 반복문",
+        java_basic_4: "배열과 문자열",
+        java_mid_1: "클래스와 객체",
+        java_mid_2: "객체지향 핵심 4대 원칙",
+        java_mid_3: "컬렉션 프레임워크",
+        java_mid_4: "예외 처리",
+        java_adv_1: "입출력과 파일",
+        java_adv_2: "모던 자바",
         modal_chapter_title: "CHAPTER SELECT",
         ch1_group: "Chapter 1. 자바 기초",
         ch1_1: "01. 자바 변수 기초",
@@ -55,6 +70,21 @@ export const translations = {
         nav_minigame: "Mini Game",
         main_title: "CHICKODE",
         main_subtitle: "Java Coding Assistant for Beginners",
+        modal_lang_title: "Select Language",
+        modal_level_title: "Select Level",
+        level_basic: "Basic",
+        level_mid: "Intermediate",
+        level_adv: "Advanced",
+        java_basic_1: "Variables & Types",
+        java_basic_2: "Operators & Expressions",
+        java_basic_3: "Conditionals & Loops",
+        java_basic_4: "Arrays & Strings",
+        java_mid_1: "Classes & Objects",
+        java_mid_2: "OOP Principles",
+        java_mid_3: "Collections Framework",
+        java_mid_4: "Exception Handling",
+        java_adv_1: "I/O & Files",
+        java_adv_2: "Modern Java",
         modal_chapter_title: "CHAPTER SELECT",
         ch1_group: "Chapter 1. Java Basics",
         ch1_1: "01. Variables",
@@ -101,7 +131,6 @@ export function savePreferences(prefs) {
     localStorage.setItem('chickodePrefs', JSON.stringify(prefs));
 }
 
-// React Hook for translations and theme
 export function useI18n() {
     const [prefs, setPrefs] = useState(loadPreferences());
 
