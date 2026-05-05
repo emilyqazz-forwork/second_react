@@ -5,18 +5,13 @@ import { getAttempts } from '../state/app-state';
 // 챕터 데이터
 const JAVA_CHAPTERS = {
   basic: [
-    // problems.js 챕터 id(1~4)에 맞춰 매핑
     { id: 1, key: 'java_basic_1' },
-    { id: 1, key: 'java_basic_2' },
-    { id: 2, key: 'java_basic_3' },
-    { id: 2, key: 'java_basic_4' },
+    { id: 2, key: 'java_basic_2' },
   ],
-  mid: [
-    { id: 3, key: 'java_mid_1' },
-    { id: 3, key: 'java_mid_2' },
-    { id: 4, key: 'java_mid_3' },
-    { id: 4, key: 'java_mid_4' },
-  ],
+ mid: [
+  { id: 3, key: 'java_mid_1' },
+  { id: 4, key: 'java_mid_2' },
+],
   adv: [
     { id: 1, key: 'java_adv_1' },
     { id: 2, key: 'java_adv_2' },
