@@ -107,6 +107,7 @@ function emptyQuizState() {
 export function MiniGame() {
   const canvasRef = useRef(null);
   const rafRef = useRef(null);
+  const chickImgRef = useRef(null);
   const lastUiStateRef = useRef(null);
   const answerQuizRef = useRef(null);
   const gameRef = useRef({
@@ -122,6 +123,10 @@ export function MiniGame() {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     const g = gameRef.current;
+
+    const chickImg = new Image();
+    chickImg.src = '/images/gamechick.png';
+    chickImgRef.current = chickImg;
 
     function getStage() { return STAGES[Math.min(g.stageIdx, STAGES.length - 1)]; }
     function getQuizPool() { return STAGE_QUIZZES[Math.min(g.stageIdx, STAGE_QUIZZES.length - 1)]; }
@@ -238,6 +243,14 @@ export function MiniGame() {
 
     function drawBird() {
       const { bird } = g; const bx = bird.x + 18; const by = bird.y;
+      const chickImgEl = chickImgRef.current;
+      if (chickImgEl && chickImgEl.complete && chickImgEl.naturalWidth) {
+        ctx.imageSmoothingEnabled = true;
+        const cw = 60;
+        const ch = 60;
+        ctx.drawImage(chickImgEl, bx - cw / 2, by - ch / 2 + 14, cw, ch);
+        return;
+      }
       if (bird.onGround) {
         const ls = Math.sin(bird.legPhase) * 5;
         ctx.strokeStyle = '#e8b84b'; ctx.lineWidth = 3; ctx.lineCap = 'round';

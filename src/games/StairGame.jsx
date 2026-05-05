@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 
-const W = 400;
-const H = 600;
-const GRAVITY = 0.5;
-const JUMP_V = -13;
+const W = 600;
+const H = 450;
+const GRAVITY = 0.38;
+const JUMP_V = -11;
 const PLATFORM_W = 80;
 const PLATFORM_H = 15;
 
@@ -22,11 +22,13 @@ const QUIZ_POOL = [
 
 function generatePlatforms() {
   const platforms = [];
-  platforms.push({ x: W / 2 - PLATFORM_W / 2, y: H - 50, id: 0 });
+  let y = H - 50;
+  platforms.push({ x: 100, y, id: 0 });
   for (let i = 1; i < 20; i++) {
+    y -= 40 + Math.random() * 10;
     platforms.push({
       x: Math.random() * (W - PLATFORM_W),
-      y: H - 50 - i * 100,
+      y,
       id: i,
     });
   }
@@ -36,17 +38,19 @@ function generatePlatforms() {
 export default function StairGame() {
   const canvasRef = useRef(null);
   const rafRef = useRef(null);
+  const chickImgRef = useRef(null);
+  const initialPlatforms = generatePlatforms();
   const stateRef = useRef({
-    bird: { x: W / 2, y: H - 80, vy: 0 },
-    platforms: generatePlatforms(),
+    bird: { x: 100, y: H - 80, vy: 0 },
+    platforms: initialPlatforms,
     cameraY: 0,
     score: 0,
     highestId: 0,
     lastQuizScore: 0,
     keys: { left: false, right: false },
-    phase: 'idle', // idle | playing | quiz | gameover
+    phase: 'idle',
     nextPlatformId: 20,
-    highestPlatformY: H - 50 - 19 * 100,
+    highestPlatformY: initialPlatforms[initialPlatforms.length - 1].y,
   });
   const [uiPhase, setUiPhase] = useState('idle');
   const [score, setScore] = useState(0);
@@ -57,11 +61,32 @@ export default function StairGame() {
     const ctx = canvas.getContext('2d');
     const g = stateRef.current;
 
+    const chickImg = new Image();
+    chickImg.src = '/images/gamechick.png';
+    chickImgRef.current = chickImg;
+
+    function resetState() {
+      const platforms = generatePlatforms();
+      Object.assign(g, {
+        bird: { x: 100, y: H - 80, vy: JUMP_V },
+        platforms,
+        cameraY: 0,
+        score: 0,
+        highestId: 0,
+        lastQuizScore: 0,
+        phase: 'playing',
+        nextPlatformId: 20,
+        highestPlatformY: platforms[platforms.length - 1].y,
+      });
+      setScore(0);
+      setUiPhase('playing');
+    }
+
     const onKey = (e) => {
       if (e.type === 'keydown') {
         if (e.code === 'ArrowLeft') g.keys.left = true;
         if (e.code === 'ArrowRight') g.keys.right = true;
-        if (e.code === 'Space' && g.phase === 'idle') startGame();
+        if (e.code === 'Space' && (g.phase === 'idle' || g.phase === 'gameover')) resetState();
       }
       if (e.type === 'keyup') {
         if (e.code === 'ArrowLeft') g.keys.left = false;
@@ -72,53 +97,39 @@ export default function StairGame() {
     document.addEventListener('keydown', onKey);
     document.addEventListener('keyup', onKey);
 
-    function startGame() {
-      Object.assign(g, {
-        bird: { x: W / 2, y: H - 80, vy: JUMP_V },
-        platforms: generatePlatforms(),
-        cameraY: 0,
-        score: 0,
-        highestId: 0,
-        lastQuizScore: 0,
-        phase: 'playing',
-        nextPlatformId: 20,
-        highestPlatformY: H - 50 - 19 * 100,
-      });
-      setScore(0);
-      setUiPhase('playing');
-    }
+    canvas.addEventListener('click', () => {
+      if (g.phase === 'idle' || g.phase === 'gameover') resetState();
+    });
 
     function loop() {
       ctx.clearRect(0, 0, W, H);
 
       // 배경
-      ctx.fillStyle = '#87CEEB';
+      const grad = ctx.createLinearGradient(0, 0, 0, H);
+      grad.addColorStop(0, '#87CEEB');
+      grad.addColorStop(1, '#c8e6f8');
+      ctx.fillStyle = grad;
       ctx.fillRect(0, 0, W, H);
 
       if (g.phase === 'playing') {
         const bird = g.bird;
 
-        // 중력
         bird.vy += GRAVITY;
         bird.y += bird.vy;
 
-        // 좌우 이동
-        if (g.keys.left) bird.x -= 4;
-        if (g.keys.right) bird.x += 4;
+        if (g.keys.left) bird.x -= 7;
+        if (g.keys.right) bird.x += 7;
 
-        // 화면 좌우 wrap
         if (bird.x < 0) bird.x = W;
         if (bird.x > W) bird.x = 0;
 
-        // 카메라 따라가기 (올라갈 때만)
-        const birdScreenY = bird.y - g.cameraY;
-        if (birdScreenY < H * 0.4) {
-          g.cameraY = bird.y - H * 0.4;
+        // 카메라 (위로만 따라감)
+        if (bird.y - g.cameraY < H * 0.3) {
+          g.cameraY = bird.y - H * 0.3;
         }
 
         // 플랫폼 충돌
         for (const p of g.platforms) {
-          const screenY = p.y - g.cameraY;
           if (
             bird.vy > 0 &&
             bird.y + 20 >= p.y &&
@@ -134,7 +145,6 @@ export default function StairGame() {
               g.score = p.id;
               setScore(p.id);
 
-              // 10계단마다 퀴즈
               if (g.score >= g.lastQuizScore + 10) {
                 g.lastQuizScore = g.score;
                 g.phase = 'quiz';
@@ -147,8 +157,8 @@ export default function StairGame() {
         }
 
         // 새 플랫폼 생성
-        if (g.highestPlatformY > g.cameraY - 200) {
-          g.highestPlatformY -= 100;
+        if (g.highestPlatformY > g.cameraY - 150) {
+          g.highestPlatformY -= 40 + Math.random() * 10;
           g.platforms.push({
             x: Math.random() * (W - PLATFORM_W),
             y: g.highestPlatformY,
@@ -157,83 +167,74 @@ export default function StairGame() {
         }
 
         // 오래된 플랫폼 제거
-        g.platforms = g.platforms.filter(p => p.y < g.cameraY + H + 100);
+        g.platforms = g.platforms.filter(p => p.y < g.cameraY + H + 300);
 
-        // 게임오버 (화면 아래로 떨어짐)
-        if (bird.y - g.cameraY > H + 50) {
+        // 게임오버
+        if (bird.y - g.cameraY > H + 90) {
           g.phase = 'gameover';
           setUiPhase('gameover');
         }
       }
 
       // 플랫폼 그리기
-      ctx.fillStyle = '#ffffff';
       for (const p of g.platforms) {
         const screenY = p.y - g.cameraY;
         if (screenY > -20 && screenY < H + 20) {
+          ctx.fillStyle = '#ffffff';
           ctx.beginPath();
           ctx.roundRect(p.x, screenY, PLATFORM_W, PLATFORM_H, 4);
           ctx.fill();
-          ctx.strokeStyle = '#aaa';
+          ctx.strokeStyle = '#aaaaaa';
           ctx.lineWidth = 1;
           ctx.stroke();
         }
       }
 
-      // 병아리 그리기
+      // 병아리
       const birdScreenY = g.bird.y - g.cameraY;
-      ctx.font = '32px serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('🐥', g.bird.x, birdScreenY);
-
-      // idle 화면
-      if (g.phase === 'idle') {
-        ctx.fillStyle = 'rgba(0,0,0,0.4)';
-        ctx.fillRect(0, 0, W, H);
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 24px sans-serif';
+      const chickImgEl = chickImgRef.current;
+      if (chickImgEl && chickImgEl.complete && chickImgEl.naturalWidth) {
+        ctx.imageSmoothingEnabled = true;
+        const cw = 56;
+        const ch = 56;
+        ctx.drawImage(chickImgEl, g.bird.x - cw / 2, birdScreenY - ch / 2, cw, ch);
+      } else {
+        ctx.font = '28px serif';
         ctx.textAlign = 'center';
-        ctx.fillText('무한 계단오르기', W / 2, H / 2 - 30);
-        ctx.font = '14px sans-serif';
-        ctx.fillStyle = 'rgba(255,255,255,0.8)';
-        ctx.fillText('스페이스바 / 클릭으로 시작', W / 2, H / 2 + 10);
+        ctx.fillText('🐥', g.bird.x, birdScreenY);
       }
 
-      // gameover 화면
-      if (g.phase === 'gameover') {
-        ctx.fillStyle = 'rgba(200,0,0,0.7)';
+      // idle
+      if (g.phase === 'idle') {
+        ctx.fillStyle = 'rgba(0,0,0,0.45)';
         ctx.fillRect(0, 0, W, H);
         ctx.fillStyle = '#fff';
-        ctx.font = 'bold 28px sans-serif';
+        ctx.font = 'bold 26px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('Game Over!', W / 2, H / 2 - 20);
+        ctx.fillText('🪜 무한 계단오르기', W / 2, H / 2 - 24);
+        ctx.font = '14px sans-serif';
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        ctx.fillText('스페이스바 / 클릭으로 시작', W / 2, H / 2 + 14);
+        ctx.fillText('← → 방향키로 이동', W / 2, H / 2 + 36);
+      }
+
+      // gameover
+      if (g.phase === 'gameover') {
+        ctx.fillStyle = 'rgba(200,0,0,0.75)';
+        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 30px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Game Over!', W / 2, H / 2 - 24);
         ctx.font = '16px sans-serif';
-        ctx.fillText(`올라간 계단: ${g.score}`, W / 2, H / 2 + 15);
+        ctx.fillText(`올라간 계단: ${g.score}`, W / 2, H / 2 + 10);
         ctx.font = '13px sans-serif';
-        ctx.fillStyle = 'rgba(255,255,255,0.8)';
-        ctx.fillText('클릭으로 재시작', W / 2, H / 2 + 45);
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        ctx.fillText('클릭 / 스페이스바로 재시작', W / 2, H / 2 + 38);
       }
 
       rafRef.current = requestAnimationFrame(loop);
     }
-
-    canvas.addEventListener('click', () => {
-      if (g.phase === 'idle' || g.phase === 'gameover') {
-        Object.assign(g, {
-          bird: { x: W / 2, y: H - 80, vy: JUMP_V },
-          platforms: generatePlatforms(),
-          cameraY: 0,
-          score: 0,
-          highestId: 0,
-          lastQuizScore: 0,
-          phase: 'playing',
-          nextPlatformId: 20,
-          highestPlatformY: H - 50 - 19 * 100,
-        });
-        setScore(0);
-        setUiPhase('playing');
-      }
-    });
 
     rafRef.current = requestAnimationFrame(loop);
 
@@ -258,14 +259,10 @@ export default function StairGame() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px 0' }}>
-      <div style={{ width: W, display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-        <span style={{ fontSize: 14, color: '#5c3d1e', fontWeight: 'bold' }}>
-          🪜 무한 계단오르기
-        </span>
-        <span style={{ fontSize: 14, fontWeight: 'bold', color: '#5c3d1e' }}>
-          계단: {score}
-        </span>
+    <div style={{ fontFamily: 'Noto Sans KR, sans-serif', maxWidth: 620, margin: '40px auto', padding: '0 16px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <span style={{ fontSize: 18, fontWeight: 900, color: '#5c3d1e' }}>🪜 무한 계단오르기</span>
+        <span style={{ fontSize: 14, fontWeight: 800, color: '#5c3d1e' }}>계단: {score}</span>
       </div>
 
       <div style={{ position: 'relative' }}>
@@ -273,37 +270,45 @@ export default function StairGame() {
           ref={canvasRef}
           width={W}
           height={H}
-          style={{ display: 'block', borderRadius: 12, border: '2px solid #e0d0b0', cursor: 'pointer' }}
+          style={{
+            display: 'block',
+            width: '100%',
+            height: 'calc(100vh - 170px)',
+            maxHeight: 'calc(100vh - 170px)',
+            aspectRatio: `${W} / ${H}`,
+            borderRadius: 12,
+            border: '2px solid #e0d0b0',
+            cursor: 'pointer',
+            objectFit: 'contain',
+          }}
         />
 
-        {/* 퀴즈 오버레이 */}
         {uiPhase === 'quiz' && quiz && (
           <div style={{
-            position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-            background: 'rgba(0,0,0,0.6)', display: 'flex',
-            justifyContent: 'center', alignItems: 'center', borderRadius: 12,
+            position: 'absolute', bottom: 0, left: 0, right: 0,
+            background: 'rgba(255,255,255,0.92)',
+            backdropFilter: 'blur(6px)',
+            borderRadius: '0 0 12px 12px',
+            padding: '16px 20px',
+            borderTop: '1px solid rgba(0,0,0,0.1)',
           }}>
-            <div style={{
-              background: 'white', padding: '28px 24px', borderRadius: 16,
-              textAlign: 'center', width: 320,
-            }}>
-              <p style={{ fontSize: 15, fontWeight: 'bold', marginBottom: 16, color: '#333' }}>
-                🪜 계단 퀴즈! {quiz.q}
-              </p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
-                {quiz.opts.map((opt) => (
-                  <button
-                    key={opt}
-                    onClick={() => handleAnswer(opt)}
-                    style={{
-                      padding: '8px 18px', borderRadius: 8, border: '1px solid #ccc',
-                      background: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 'bold',
-                    }}
-                  >
-                    {opt}
-                  </button>
-                ))}
-              </div>
+            <p style={{ fontSize: 14, fontWeight: 900, marginBottom: 12, color: '#333' }}>
+              🪜 계단 퀴즈! {quiz.q}
+            </p>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {quiz.opts.map((opt) => (
+                <button
+                  key={opt}
+                  onClick={() => handleAnswer(opt)}
+                  style={{
+                    padding: '8px 18px', borderRadius: 8,
+                    border: '1px solid #bbb', background: '#fff',
+                    cursor: 'pointer', fontSize: 13, fontWeight: 900,
+                  }}
+                >
+                  {opt}
+                </button>
+              ))}
             </div>
           </div>
         )}
