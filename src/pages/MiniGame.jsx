@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MiniGame as Jump } from '../games/Jump';
 import BugGame from '../games/BugGame';
 import StairGame from '../games/StairGame';
@@ -30,6 +31,7 @@ const GAMES = [
 
 export function MiniGame() {
   const [selectedGame, setSelectedGame] = useState(null);
+  const navigate = useNavigate();
 
   if (selectedGame === 'jump') {
     return (
@@ -84,6 +86,9 @@ export function MiniGame() {
 
   return (
     <div className="minigame-container">
+      <button className="back-btn" onClick={() => navigate('/')} style={{ alignSelf: 'flex-start' }}>
+        ← 돌아가기
+      </button>
       <h2 className="minigame-title">🎮 미니게임</h2>
       <div className="game-cards">
         {GAMES.map((game) => (

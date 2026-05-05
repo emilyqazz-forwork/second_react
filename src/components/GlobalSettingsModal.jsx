@@ -7,7 +7,7 @@ export function GlobalSettingsModal({ onClose, t, params, setParams }) {
     <div className="modal-overlay" style={{ display: 'flex' }}>
       <div className="modal-content" style={{ width: '400px', textAlign: 'center' }}>
         <button className="close-btn" onClick={onClose}>&times;</button>
-        <h2 className="modal-header">{t('modal_settings_title')}</h2>
+        <h2 className="modal-header">{params.lang === 'en' ? 'Global settings' : '설정'}</h2>
         <div className="setting-form" style={{ gap: '30px', marginTop: '30px' }}>
           <div className="setting-group" style={{ alignItems: 'center' }}>
             <label>{t('setting_theme')}</label>
