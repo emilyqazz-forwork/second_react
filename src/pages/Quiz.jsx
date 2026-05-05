@@ -1,5 +1,8 @@
 /*문제 풀이 및 IDE 화면을 담당하는 컴포넌트입니다. 사용자가 코드를 직접 작성하거나 객관식 답안을 고르며
  AI 튜터(병아리 선배)의 도움을 받아 학습할 수 있는 공간*/
+const settings = location.state || { count: 10, ratio: 50, chapter: 1, difficulty: '중' };
+console.log('settings:', settings);
+
 
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';

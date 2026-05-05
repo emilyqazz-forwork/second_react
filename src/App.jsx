@@ -37,6 +37,7 @@ function App() {
         <Route path="/pattern"  element={<Pattern t={t} />} />
         <Route path="/result"   element={<Result t={t} />} />
         <Route path="/minigame" element={<MiniGame />} />
+        <Route path="/play" element={<Quiz t={t} />} />
       </Routes>
     </BrowserRouter>
   );
