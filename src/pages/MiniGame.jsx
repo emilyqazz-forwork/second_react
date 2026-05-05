@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { MiniGame as Jump } from '../games/Jump';
 import BugGame from '../games/BugGame';
 import StairGame from '../games/StairGame';
@@ -31,7 +30,6 @@ const GAMES = [
 
 export function MiniGame() {
   const [selectedGame, setSelectedGame] = useState(null);
-  const navigate = useNavigate();
 
   if (selectedGame === 'jump') {
     return (
@@ -48,8 +46,8 @@ export function MiniGame() {
     return (
       <div className="game-wrapper">
         <style>{`
-          .buggame-stage { width: 100%; max-width: 980px; height: calc(100vh - 180px); margin: 0 auto; background: url('/images/게임배경.png') center / cover no-repeat; overflow: hidden; position: relative; border-radius: 16px; }
-          .buggame-shell { width: 100%; height: 100%; position: relative; }
+          .buggame-stage { position: fixed; inset: 0; background: url('/images/게임배경.png') center / cover no-repeat; overflow: hidden; display: flex; justify-content: center; padding: 16px; }
+          .buggame-shell { width: 100%; max-width: 980px; height: 100%; position: relative; }
           .buggame-back { position: absolute; top: 14px; left: 14px; z-index: 2000; padding: 10px 14px; border-radius: 999px; border: 1px solid rgba(0,0,0,0.15); background: rgba(255,255,255,0.85); color: #111; font-weight: 900; cursor: pointer; backdrop-filter: blur(6px); }
           .buggame-back:hover { background: rgba(255,255,255,0.95); }
           .bug-game-container { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; }
@@ -59,6 +57,7 @@ export function MiniGame() {
           .game-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 1000; }
           .game-modal { background: rgba(255,255,255,0.95); padding: 26px; border-radius: 16px; text-align: center; max-width: min(520px, calc(100vw - 32px)); }
           .game-modal button { padding: 12px 18px; border-radius: 10px; border: 0; background: #111; color: #fff; font-weight: 900; cursor: pointer; }
+          body { overflow: hidden; }
         `}</style>
         <div className="buggame-stage">
           <div className="buggame-shell">
@@ -85,9 +84,6 @@ export function MiniGame() {
 
   return (
     <div className="minigame-container">
-      <button className="back-btn" onClick={() => navigate('/')}>
-        ← 돌아가기
-      </button>
       <h2 className="minigame-title">🎮 미니게임</h2>
       <div className="game-cards">
         {GAMES.map((game) => (

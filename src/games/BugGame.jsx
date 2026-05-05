@@ -4,7 +4,6 @@ import './BugGame.css';
 export default function BugGame() {
   const containerRef = useRef(null);
   const [containerH, setContainerH] = useState(window.innerHeight);
-  const [containerW, setContainerW] = useState(window.innerWidth);
   const [score, setScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState(60);
   const [chickX, setChickX] = useState(window.innerWidth / 2);
@@ -60,12 +59,7 @@ export default function BugGame() {
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const update = () => {
-      const rect = el.getBoundingClientRect();
-      setContainerW(rect.width || window.innerWidth);
-      setContainerH(rect.height || window.innerHeight);
-      setChickX((prev) => (rect.width ? Math.min(Math.max(prev, 55), rect.width - 55) : prev));
-    };
+    const update = () => setContainerH(el.getBoundingClientRect().height || window.innerHeight);
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
@@ -77,11 +71,11 @@ export default function BugGame() {
       if (gameState !== 'PLAYING') return;
       const step = 50;
       if (e.key === 'ArrowLeft') setChickX(prev => Math.max(55, prev - step));
-      if (e.key === 'ArrowRight') setChickX(prev => Math.min(containerW - 55, prev + step));
+      if (e.key === 'ArrowRight') setChickX(prev => Math.min(window.innerWidth - 55, prev + step));
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [gameState, containerW]);
+  }, [gameState]);
 
   useEffect(() => {
     if (gameState !== 'PLAYING') return;
@@ -90,8 +84,9 @@ export default function BugGame() {
     }, 1000);
     const spawnInterval = setInterval(() => {
       const data = wordPool[Math.floor(Math.random() * wordPool.length)];
-      const estW = Math.min(320, 12 * String(data.text).length + 80);
-      const safeX = Math.max(0, containerW - estW - 20);
+      const vw = window.innerWidth;
+      const estW = Math.min(360, 14 * String(data.text).length + 90);
+      const safeX = Math.max(0, vw - estW - 24);
       setWords(prev => [...prev, {
         id: Math.random(), ...data,
         w: estW,
@@ -100,7 +95,7 @@ export default function BugGame() {
       }]);
     }, 1000);
     return () => { clearInterval(timer); clearInterval(spawnInterval); };
-  }, [gameState, containerW]);
+  }, [gameState]);
 
   useEffect(() => {
     if (gameState !== 'PLAYING') return;
@@ -125,7 +120,7 @@ export default function BugGame() {
             else { setScore(s => Math.max(0, s - 5)); playSound(sfxFail); }
             continue;
           }
-          if (nextY < containerH) nextWords.push({ ...word, y: nextY });
+          if (nextY < window.innerHeight) nextWords.push({ ...word, y: nextY });
         }
         return nextWords;
       });
