@@ -5,7 +5,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'; // 페이지 �
 import { GlobalNav } from './components/GlobalNav'; // 전역 네브바
 import { GlobalSettingsModal } from './components/GlobalSettingsModal'; // 설정 모달
 import { AuthModal } from './components/AuthModal'; // 로그인/회원가입 모달
-import { Play } from './pages/Play';
+import { Play } from "./pages/Quiz";
 import { Home } from './pages/Home';
 import { Quiz } from './pages/Quiz';    
 import { Note } from './pages/Note';
