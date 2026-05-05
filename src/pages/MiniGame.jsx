@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { MiniGame as Jump } from '../games/Jump';
+import BugGame from '../games/BugGame';
 import './MiniGame.css';
 
 const GAMES = [
@@ -15,7 +16,7 @@ const GAMES = [
     emoji: '🪲',
     title: '벌레 잡는 삐약이',
     desc: '버그 코드만 골라 드세요!',
-    ready: false,
+    ready: true,
   },
   {
     id: 'stairs',
@@ -40,9 +41,36 @@ export function MiniGame() {
     );
   }
 
-  // 나중에 팀원 코드 받으면 여기에 추가
-  // if (selectedGame === 'bugs') return ( <div><button onClick={...}>← 돌아가기</button><Bugs /></div> );
-  // if (selectedGame === 'stairs') return ( <div><button onClick={...}>← 돌아가기</button><Stairs /></div> );
+  if (selectedGame === 'bugs') {
+    return (
+      <div className="game-wrapper">
+        <style>{`
+          .buggame-stage { position: fixed; inset: 0; background: url('/images/게임배경.png') center / cover no-repeat; overflow: hidden; display: flex; justify-content: center; padding: 16px; }
+          .buggame-shell { width: 100%; max-width: 980px; height: 100%; position: relative; }
+          .buggame-back { position: absolute; top: 14px; left: 14px; z-index: 2000; padding: 10px 14px; border-radius: 999px; border: 1px solid rgba(0,0,0,0.15); background: rgba(255,255,255,0.85); color: #111; font-weight: 900; cursor: pointer; backdrop-filter: blur(6px); }
+          .buggame-back:hover { background: rgba(255,255,255,0.95); }
+          .bug-game-container { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; }
+          .game-hud { position: absolute; top: 0; left: 0; width: 100%; height: 60px; background: rgba(0,0,0,0.55); color: #fff; display: flex; justify-content: space-around; align-items: center; font-weight: 900; z-index: 100; }
+          .game-chick { position: absolute; width: 110px; height: 110px; transform: translateX(-50%); z-index: 50; }
+          .falling-word { position: absolute; padding: 10px 18px; border-radius: 999px; background: rgba(255,255,255,0.92); border: 1px solid rgba(0,0,0,0.18); font-weight: 900; white-space: nowrap; }
+          .game-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+          .game-modal { background: rgba(255,255,255,0.95); padding: 26px; border-radius: 16px; text-align: center; max-width: min(520px, calc(100vw - 32px)); }
+          .game-modal button { padding: 12px 18px; border-radius: 10px; border: 0; background: #111; color: #fff; font-weight: 900; cursor: pointer; }
+          body { overflow: hidden; }
+        `}</style>
+        <div className="buggame-stage">
+          <div className="buggame-shell">
+            <button type="button" className="buggame-back" onClick={() => setSelectedGame(null)}>
+              ← 돌아가기
+            </button>
+            <BugGame />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // if (selectedGame === 'stairs') return ( ... <Stairs /> ... );
 
   return (
     <div className="minigame-container">
