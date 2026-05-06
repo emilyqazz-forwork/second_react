@@ -53,6 +53,8 @@ export default function StairGame({ onBack }) {
     phase: 'idle',
     nextPlatformId: 20,
     highestPlatformY: initialPlatforms[initialPlatforms.length - 1].y,
+    rainDrops: null,
+    stars: null,
   });
   const [uiPhase, setUiPhase] = useState('idle');
   const [score, setScore] = useState(0);
@@ -152,12 +154,111 @@ export default function StairGame({ onBack }) {
       applyCanvasTransform();
       ctx.clearRect(0, 0, W, H);
 
-      // 배경
-      const grad = ctx.createLinearGradient(0, 0, 0, H);
-      grad.addColorStop(0, '#87CEEB');
-      grad.addColorStop(1, '#c8e6f8');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, W, H);
+      // 배경 - 높이에 따라 변화
+      function drawBackground() {
+        const altitude = -g.cameraY; // 높이 (위로 갈수록 증가)
+
+        // 배경 단계 정의
+        const stages = [
+          { alt: 0, top: '#4a7c4e', bot: '#6aaf6e' },
+          { alt: 900, top: '#87CEEB', bot: '#c8e6f8' },
+          { alt: 2400, top: '#8a9bb0', bot: '#b0bec5' },
+          { alt: 4500, top: '#ff8c42', bot: '#ffcc80' },
+          { alt: 7500, top: '#1a1a4e', bot: '#3d2b6b' },
+          { alt: 12000, top: '#000000', bot: '#0a0a1a' },
+          { alt: 18000, top: '#000005', bot: '#00000a' }, // 깊은 우주
+          { alt: 25000, top: '#000000', bot: '#000000' }, // 완전한 암흑
+        ];
+
+        // 현재 단계 찾기
+        let stageIdx = 0;
+        for (let i = 0; i < stages.length - 1; i++) {
+          if (altitude >= stages[i].alt) stageIdx = i;
+        }
+        const next = Math.min(stageIdx + 1, stages.length - 1);
+        const cur = stages[stageIdx];
+        const nxt = stages[next];
+
+        // 단계 간 보간
+        const range = stages[next].alt - stages[stageIdx].alt || 1;
+        const t = Math.min((altitude - stages[stageIdx].alt) / range, 1);
+
+        function lerpColor(c1, c2, t) {
+          const r1 = parseInt(c1.slice(1, 3), 16), g1 = parseInt(c1.slice(3, 5), 16), b1 = parseInt(c1.slice(5, 7), 16);
+          const r2 = parseInt(c2.slice(1, 3), 16), g2 = parseInt(c2.slice(3, 5), 16), b2 = parseInt(c2.slice(5, 7), 16);
+          const r = Math.round(r1 + (r2 - r1) * t);
+          const gg = Math.round(g1 + (g2 - g1) * t);
+          const b = Math.round(b1 + (b2 - b1) * t);
+          return `rgb(${r},${gg},${b})`;
+        }
+
+        const topColor = lerpColor(cur.top, nxt.top, t);
+        const botColor = lerpColor(cur.bot, nxt.bot, t);
+
+        const grad = ctx.createLinearGradient(0, 0, 0, H);
+        grad.addColorStop(0, topColor);
+        grad.addColorStop(1, botColor);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, W, H);
+
+        // 비 효과
+        if (altitude > 2100 && altitude < 4800) {
+          const rainOpacity = altitude < 2400 ? (altitude - 2100) / 300
+            : altitude > 4500 ? (4800 - altitude) / 300 : 1;
+          if (!g.rainDrops) {
+            g.rainDrops = Array.from({ length: 80 }, () => ({
+              x: Math.random() * W,
+              y: Math.random() * H,
+              speed: 6 + Math.random() * 4,
+              len: 12 + Math.random() * 8,
+            }));
+          }
+          ctx.strokeStyle = `rgba(174,194,224,${rainOpacity * 0.6})`;
+          ctx.lineWidth = 1;
+          for (const d of g.rainDrops) {
+            ctx.beginPath();
+            ctx.moveTo(d.x, d.y);
+            ctx.lineTo(d.x - 2, d.y + d.len);
+            ctx.stroke();
+            d.y += d.speed;
+            if (d.y > H) { d.y = -20; d.x = Math.random() * W; }
+          }
+        } else {
+          g.rainDrops = null;
+        }
+
+        // 별 효과 (밤하늘~우주)
+        if (altitude > 6000) {
+          const starOpacity = Math.min((altitude - 6000) / 1500, 1);
+          if (!g.stars) {
+            g.stars = Array.from({ length: 60 }, () => ({
+              x: Math.random() * W,
+              y: Math.random() * H,
+              r: 0.5 + Math.random() * 1.5,
+              twinkle: Math.random() * Math.PI * 2,
+            }));
+          }
+          for (const s of g.stars) {
+            s.twinkle += 0.05;
+            const alpha = starOpacity * (0.5 + Math.sin(s.twinkle) * 0.5);
+            ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        } else {
+          g.stars = null;
+        }
+
+        // 땅 (낮은 고도)
+        if (altitude < 200) {
+          const groundAlpha = 1 - altitude / 200;
+          ctx.fillStyle = `rgba(101,163,97,${groundAlpha})`;
+          ctx.fillRect(0, H - 30, W, 30);
+        }
+      }
+
+      drawBackground();
 
       if (g.phase === 'playing') {
         const bird = g.bird;
