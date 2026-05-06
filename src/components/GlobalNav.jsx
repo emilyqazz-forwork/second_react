@@ -12,29 +12,29 @@ export function GlobalNav({ onOpenSettings, onOpenAuth, t }) {
   const navRef = useRef(null);
   const location = useLocation();
 
-  // 로그인 상태 감지
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id);
+      if (session?.user) fetchProfile();
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id);
+      if (session?.user) fetchProfile();
       else setProfile(null);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  async function fetchProfile(userId) {
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
-    if (data) setProfile(data);
+  async function fetchProfile() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      setProfile({
+        username: user.user_metadata?.username || user.email?.split('@')[0],
+        avatar_url: user.user_metadata?.avatar_url || null,
+      });
+    }
   }
 
   async function handleLogout() {
@@ -44,10 +44,9 @@ export function GlobalNav({ onOpenSettings, onOpenAuth, t }) {
 
   async function handleNameUpdate() {
     if (!newName.trim()) return;
-    const { error } = await supabase
-      .from('profiles')
-      .update({ username: newName })
-      .eq('id', user.id);
+    const { error } = await supabase.auth.updateUser({
+      data: { username: newName }
+    });
     if (!error) {
       setProfile(prev => ({ ...prev, username: newName }));
       setEditMode(false);
@@ -65,7 +64,9 @@ export function GlobalNav({ onOpenSettings, onOpenAuth, t }) {
       .upload(filePath, file, { upsert: true });
     if (!uploadError) {
       const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
-      await supabase.from('profiles').update({ avatar_url: data.publicUrl }).eq('id', user.id);
+      await supabase.auth.updateUser({
+        data: { avatar_url: data.publicUrl }
+      });
       setProfile(prev => ({ ...prev, avatar_url: data.publicUrl }));
     }
   }
@@ -116,7 +117,6 @@ export function GlobalNav({ onOpenSettings, onOpenAuth, t }) {
             <button id="globalSettingsBtn" className="settings-btn" title="Settings" onClick={onOpenSettings}>⚙️</button>
 
             {user ? (
-              // 로그인 상태
               <div style={{ position: 'relative' }}>
                 <div
                   onClick={() => setShowProfileMenu(!showProfileMenu)}
@@ -144,20 +144,14 @@ export function GlobalNav({ onOpenSettings, onOpenAuth, t }) {
                     borderRadius: 16, padding: 20, width: 220,
                     boxShadow: '6px 6px 0 #3e2723', zIndex: 9999,
                   }}>
-                    {/* 프로필 사진 변경 */}
                     <div style={{ textAlign: 'center', marginBottom: 12 }}>
                       <img
                         src={profile?.avatar_url || '/images/chick.png'}
                         alt="프로필"
                         style={{ width: 70, height: 70, borderRadius: '50%', objectFit: 'cover', border: '3px solid #5d4037' }}
                       />
-                      <label style={{ display: 'block', marginTop: 6, fontSize: 12, color: '#8d6e63', cursor: 'pointer', fontWeight: 'bold' }}>
-                        📷 사진 변경
-                        <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarChange} />
-                      </label>
                     </div>
 
-                    {/* 이름 변경 */}
                     {editMode ? (
                       <div style={{ marginBottom: 12 }}>
                         <input
@@ -199,7 +193,6 @@ export function GlobalNav({ onOpenSettings, onOpenAuth, t }) {
                       >✏️ 이름 변경</button>
                     )}
 
-                    {/* 로그아웃 */}
                     <button
                       onClick={handleLogout}
                       style={{
@@ -212,7 +205,6 @@ export function GlobalNav({ onOpenSettings, onOpenAuth, t }) {
                 )}
               </div>
             ) : (
-              // 비로그인 상태 - 게스트
               <div
                 onClick={onOpenAuth}
                 style={{
