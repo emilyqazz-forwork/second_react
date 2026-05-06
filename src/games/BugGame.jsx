@@ -4,9 +4,11 @@ import { useNavigate } from 'react-router-dom';
 const W = 1200;
 const H = 700;
 const MAX_MISS = 5;
+const MAX_FALLING_WORDS = 3;
+const SPAWN_INTERVAL_FRAMES = 48;
 
 const STAGE_CONFIG = [
-  { stage: 1, duration: 20, speed: [1.5, 2.0], label: 'STAGE 1' },
+  { stage: 1, duration: 20, speed: [0.85, 1.15], label: 'STAGE 1' },
   { stage: 2, duration: 20, speed: [2.5, 3.2], label: 'STAGE 2' },
   { stage: 3, duration: 20, speed: [3.5, 4.5], label: 'STAGE 3' },
 ];
@@ -65,7 +67,7 @@ function shuffle(arr) {
   return a;
 }
 
-export default function BugGame() {
+export default function BugGame({ onBack }) {
   const canvasRef = useRef(null);
   const rafRef = useRef(null);
   const chickImgRef = useRef(null);
@@ -162,7 +164,7 @@ export default function BugGame() {
     }
 
     function spawnWord() {
-      if (g.words.length > 0) return;
+      if (g.words.length >= MAX_FALLING_WORDS) return;
       if (g.poolIndex >= g.pool.length) {
         g.pool = shuffle(STAGE_WORDS[g.stageIdx + 1]);
         g.poolIndex = 0;
@@ -222,7 +224,7 @@ export default function BugGame() {
         if (g.keys.right) g.chick.x = Math.min(W - 50, g.chick.x + 8);
 
         g.spawnTimer++;
-        if (g.spawnTimer > 30) {
+        if (g.spawnTimer > SPAWN_INTERVAL_FRAMES) {
           g.spawnTimer = 0;
           spawnWord();
         }
@@ -399,7 +401,8 @@ export default function BugGame() {
         }}
       />
       <button
-        onClick={() => navigate('/minigame')}
+        type="button"
+        onClick={() => (onBack ? onBack() : navigate('/minigame'))}
         style={{
           position: 'absolute',
           top: 16, right: 16,
