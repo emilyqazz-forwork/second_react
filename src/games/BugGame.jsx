@@ -98,11 +98,14 @@ export default function BugGame({ onBack }) {
   useEffect(() => {
     const topControl = document.querySelector('.top-control-layer');
     const menuBtn = document.querySelector('.global-menu-btn');
+    const prevOverflow = document.body.style.overflow;
     if (topControl) topControl.style.display = 'none';
     if (menuBtn) menuBtn.style.display = 'none';
+    document.body.style.overflow = 'hidden';
     return () => {
       if (topControl) topControl.style.display = '';
       if (menuBtn) menuBtn.style.display = '';
+      document.body.style.overflow = prevOverflow;
     };
   }, []);
 
@@ -111,12 +114,42 @@ export default function BugGame({ onBack }) {
     const ctx = canvas.getContext('2d');
     const g = stateRef.current;
 
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = W * dpr;
-    canvas.height = H * dpr;
     canvas.style.width = '100%';
     canvas.style.height = '100%';
-    ctx.scale(dpr, dpr);
+    canvas.style.display = 'block';
+
+    const STAGE_BG = [
+      ['#e8f4e8', '#c8e6c8'],
+      ['#e8eef8', '#c0d4f0'],
+      ['#f8e8e8', '#f0c0c0'],
+    ];
+    let lastDw = -1;
+    let lastDh = -1;
+    function applyCanvasTransform() {
+      const dpr = window.devicePixelRatio || 1;
+      const dw = Math.max(1, canvas.clientWidth);
+      const dh = Math.max(1, canvas.clientHeight);
+      if (dw !== lastDw || dh !== lastDh) {
+        lastDw = dw;
+        lastDh = dh;
+        canvas.width = Math.floor(dw * dpr);
+        canvas.height = Math.floor(dh * dpr);
+      }
+      const bg = STAGE_BG[stateRef.current.stageIdx] || STAGE_BG[0];
+      const letterbox = bg[1];
+      const scale = Math.min(dw / W, dh / H);
+      const drawW = W * scale;
+      const drawH = H * scale;
+      const ox = (dw - drawW) / 2;
+      const oy = (dh - drawH) / 2;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.fillStyle = letterbox;
+      ctx.fillRect(0, 0, dw, dh);
+      ctx.imageSmoothingEnabled = true;
+      if (typeof ctx.imageSmoothingQuality === 'string') ctx.imageSmoothingQuality = 'high';
+      ctx.translate(ox, oy);
+      ctx.scale(scale, scale);
+    }
 
     const chickImg = new Image();
     chickImg.src = '/images/gamechick.png';
@@ -201,14 +234,10 @@ export default function BugGame({ onBack }) {
     });
 
     function loop() {
+      applyCanvasTransform();
       ctx.clearRect(0, 0, W, H);
 
-      const bgColors = [
-        ['#e8f4e8', '#c8e6c8'],
-        ['#e8eef8', '#c0d4f0'],
-        ['#f8e8e8', '#f0c0c0'],
-      ];
-      const bg = bgColors[stateRef.current.stageIdx] || bgColors[0];
+      const bg = STAGE_BG[stateRef.current.stageIdx] || STAGE_BG[0];
       const grad = ctx.createLinearGradient(0, 0, 0, H);
       grad.addColorStop(0, bg[0]);
       grad.addColorStop(1, bg[1]);
@@ -297,6 +326,8 @@ export default function BugGame({ onBack }) {
 
       const img = chickImgRef.current;
       if (img && img.complete && img.naturalWidth) {
+        ctx.imageSmoothingEnabled = true;
+        if (typeof ctx.imageSmoothingQuality === 'string') ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(img, g.chick.x - 40, g.chick.y - 40, 80, 80);
       } else {
         ctx.font = '48px serif';
@@ -386,17 +417,19 @@ export default function BugGame({ onBack }) {
     <div style={{
       position: 'fixed',
       top: 0, left: 0, right: 0, bottom: 0,
-      background: '#000',
       zIndex: 500,
+      overflow: 'hidden',
     }}>
       <canvas
         ref={canvasRef}
         width={W}
         height={H}
         style={{
-          display: 'block',
+          position: 'absolute',
+          inset: 0,
           width: '100%',
           height: '100%',
+          display: 'block',
           cursor: 'pointer',
         }}
       />

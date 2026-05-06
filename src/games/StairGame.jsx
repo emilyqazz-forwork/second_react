@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const W = 600;
 const H = 450;
@@ -35,10 +36,11 @@ function generatePlatforms() {
   return platforms;
 }
 
-export default function StairGame() {
+export default function StairGame({ onBack }) {
   const canvasRef = useRef(null);
   const rafRef = useRef(null);
   const chickImgRef = useRef(null);
+  const navigate = useNavigate();
   const initialPlatforms = generatePlatforms();
   const stateRef = useRef({
     bird: { x: 100, y: H - 80, vy: 0 },
@@ -57,9 +59,54 @@ export default function StairGame() {
   const [quiz, setQuiz] = useState(null);
 
   useEffect(() => {
+    const topControl = document.querySelector('.top-control-layer');
+    const menuBtn = document.querySelector('.global-menu-btn');
+    const prevOverflow = document.body.style.overflow;
+    if (topControl) topControl.style.display = 'none';
+    if (menuBtn) menuBtn.style.display = 'none';
+    document.body.style.overflow = 'hidden';
+    return () => {
+      if (topControl) topControl.style.display = '';
+      if (menuBtn) menuBtn.style.display = '';
+      document.body.style.overflow = prevOverflow;
+    };
+  }, []);
+
+  useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     const g = stateRef.current;
+
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+    canvas.style.display = 'block';
+
+    const LETTERBOX = '#6eb6e8';
+    let lastDw = -1;
+    let lastDh = -1;
+    function applyCanvasTransform() {
+      const dpr = window.devicePixelRatio || 1;
+      const dw = Math.max(1, canvas.clientWidth);
+      const dh = Math.max(1, canvas.clientHeight);
+      if (dw !== lastDw || dh !== lastDh) {
+        lastDw = dw;
+        lastDh = dh;
+        canvas.width = Math.floor(dw * dpr);
+        canvas.height = Math.floor(dh * dpr);
+      }
+      const scale = Math.min(dw / W, dh / H);
+      const drawW = W * scale;
+      const drawH = H * scale;
+      const ox = (dw - drawW) / 2;
+      const oy = (dh - drawH) / 2;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.fillStyle = LETTERBOX;
+      ctx.fillRect(0, 0, dw, dh);
+      ctx.imageSmoothingEnabled = true;
+      if (typeof ctx.imageSmoothingQuality === 'string') ctx.imageSmoothingQuality = 'high';
+      ctx.translate(ox, oy);
+      ctx.scale(scale, scale);
+    }
 
     const chickImg = new Image();
     chickImg.src = '/images/gamechick.png';
@@ -102,6 +149,7 @@ export default function StairGame() {
     });
 
     function loop() {
+      applyCanvasTransform();
       ctx.clearRect(0, 0, W, H);
 
       // 배경
@@ -195,6 +243,7 @@ export default function StairGame() {
       const chickImgEl = chickImgRef.current;
       if (chickImgEl && chickImgEl.complete && chickImgEl.naturalWidth) {
         ctx.imageSmoothingEnabled = true;
+        if (typeof ctx.imageSmoothingQuality === 'string') ctx.imageSmoothingQuality = 'high';
         const cw = 56;
         const ch = 56;
         ctx.drawImage(chickImgEl, g.bird.x - cw / 2, birdScreenY - ch / 2, cw, ch);
@@ -259,38 +308,76 @@ export default function StairGame() {
   };
 
   return (
-    <div style={{ fontFamily: 'Noto Sans KR, sans-serif', maxWidth: 620, margin: '40px auto', padding: '0 16px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-        <span style={{ fontSize: 18, fontWeight: 900, color: '#5c3d1e' }}>🪜 무한 계단오르기</span>
-        <span style={{ fontSize: 14, fontWeight: 800, color: '#5c3d1e' }}>계단: {score}</span>
+    <div style={{
+      position: 'fixed',
+      top: 0, left: 0, right: 0, bottom: 0,
+      zIndex: 500,
+      overflow: 'hidden',
+      fontFamily: 'Noto Sans KR, sans-serif',
+    }}>
+      <button
+        type="button"
+        onClick={() => (onBack ? onBack() : navigate('/minigame'))}
+        style={{
+          position: 'absolute',
+          top: 16, right: 16,
+          padding: '8px 18px',
+          borderRadius: 12,
+          border: '2px solid #e0d0b0',
+          background: 'rgba(255,255,255,0.85)',
+          cursor: 'pointer',
+          fontSize: 14,
+          fontWeight: 900,
+          color: '#5c3d1e',
+          zIndex: 600,
+        }}
+      >
+        ← 돌아가기
+      </button>
+      <canvas
+        ref={canvasRef}
+        width={W}
+        height={H}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          width: '100%',
+          height: '100%',
+          display: 'block',
+          cursor: 'pointer',
+          touchAction: 'none',
+        }}
+      />
+      <div style={{
+        position: 'absolute',
+        top: 52,
+        left: 12,
+        right: 12,
+        zIndex: 550,
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        pointerEvents: 'none',
+        textShadow: '0 1px 3px rgba(0,0,0,0.6)',
+      }}>
+        <span style={{ fontSize: 17, fontWeight: 900, color: '#fff' }}>🪜 무한 계단오르기</span>
+        <span style={{ fontSize: 14, fontWeight: 800, color: '#fff' }}>계단: {score}</span>
       </div>
 
-      <div style={{ position: 'relative' }}>
-        <canvas
-          ref={canvasRef}
-          width={W}
-          height={H}
-          style={{
-            display: 'block',
-            width: '100%',
-            height: 'calc(100vh - 170px)',
-            maxHeight: 'calc(100vh - 170px)',
-            aspectRatio: `${W} / ${H}`,
-            borderRadius: 12,
-            border: '2px solid #e0d0b0',
-            cursor: 'pointer',
-            objectFit: 'contain',
-          }}
-        />
-
-        {uiPhase === 'quiz' && quiz && (
+      {uiPhase === 'quiz' && quiz && (
           <div style={{
-            position: 'absolute', bottom: 0, left: 0, right: 0,
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 550,
+            maxHeight: 'min(42vh, 380px)',
+            overflow: 'auto',
             background: 'rgba(255,255,255,0.92)',
             backdropFilter: 'blur(6px)',
-            borderRadius: '0 0 12px 12px',
             padding: '16px 20px',
             borderTop: '1px solid rgba(0,0,0,0.1)',
+            boxSizing: 'border-box',
           }}>
             <p style={{ fontSize: 14, fontWeight: 900, marginBottom: 12, color: '#333' }}>
               🪜 계단 퀴즈! {quiz.q}
@@ -311,8 +398,7 @@ export default function StairGame() {
               ))}
             </div>
           </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }

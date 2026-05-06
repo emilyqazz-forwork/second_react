@@ -34,49 +34,15 @@ export function MiniGame() {
   const navigate = useNavigate();
 
   if (selectedGame === 'jump') {
-    return (
-      <div className="game-wrapper">
-        <button className="back-btn" onClick={() => setSelectedGame(null)}>
-          ← 돌아가기
-        </button>
-        <Jump />
-      </div>
-    );
+    return <Jump onBack={() => setSelectedGame(null)} />;
   }
 
   if (selectedGame === 'bugs') {
-    return (
-      <div className="game-wrapper">
-        <style>{`
-          .buggame-stage { position: fixed; inset: 0; background: url('/images/게임배경.png') center / cover no-repeat; overflow: hidden; display: flex; justify-content: center; padding: 16px; }
-          .buggame-shell { width: 100%; max-width: 980px; height: 100%; position: relative; }
-          .bug-game-container { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; }
-          .game-hud { position: absolute; top: 0; left: 0; width: 100%; height: 60px; background: rgba(0,0,0,0.55); color: #fff; display: flex; justify-content: space-around; align-items: center; font-weight: 900; z-index: 100; }
-          .game-chick { position: absolute; width: 110px; height: 110px; transform: translateX(-50%); z-index: 50; }
-          .falling-word { position: absolute; padding: 10px 18px; border-radius: 999px; background: rgba(255,255,255,0.92); border: 1px solid rgba(0,0,0,0.18); font-weight: 900; white-space: nowrap; }
-          .game-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-          .game-modal { background: rgba(255,255,255,0.95); padding: 26px; border-radius: 16px; text-align: center; max-width: min(520px, calc(100vw - 32px)); }
-          .game-modal button { padding: 12px 18px; border-radius: 10px; border: 0; background: #111; color: #fff; font-weight: 900; cursor: pointer; }
-          body { overflow: hidden; }
-        `}</style>
-        <div className="buggame-stage">
-          <div className="buggame-shell">
-            <BugGame onBack={() => setSelectedGame(null)} />
-          </div>
-        </div>
-      </div>
-    );
+    return <BugGame onBack={() => setSelectedGame(null)} />;
   }
 
   if (selectedGame === 'stairs') {
-    return (
-      <div className="game-wrapper">
-        <button className="back-btn" onClick={() => setSelectedGame(null)}>
-          ← 돌아가기
-        </button>
-        <StairGame />
-      </div>
-    );
+    return <StairGame onBack={() => setSelectedGame(null)} />;
   }
 
   return (

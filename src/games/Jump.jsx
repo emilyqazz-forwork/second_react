@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const W = 960;
 const H = 340;
@@ -104,12 +105,13 @@ function emptyQuizState() {
   return { visible: false, code: '', opts: [], feedback: '', feedbackColor: '', locked: false };
 }
 
-export function MiniGame() {
+export function MiniGame({ onBack }) {
   const canvasRef = useRef(null);
   const rafRef = useRef(null);
   const chickImgRef = useRef(null);
   const lastUiStateRef = useRef(null);
   const answerQuizRef = useRef(null);
+  const navigate = useNavigate();
   const gameRef = useRef({
     stageIdx: 0, state: 'idle', dist: 0, bgOffset: 0, lives: MAX_LIVES,
     obstacles: [], sparkles: [], deathFlash: 0, stageComplete: false,
@@ -120,9 +122,53 @@ export function MiniGame() {
   const [quizState, setQuizState] = useState(emptyQuizState);
 
   useEffect(() => {
+    const topControl = document.querySelector('.top-control-layer');
+    const menuBtn = document.querySelector('.global-menu-btn');
+    const prevOverflow = document.body.style.overflow;
+    if (topControl) topControl.style.display = 'none';
+    if (menuBtn) menuBtn.style.display = 'none';
+    document.body.style.overflow = 'hidden';
+    return () => {
+      if (topControl) topControl.style.display = '';
+      if (menuBtn) menuBtn.style.display = '';
+      document.body.style.overflow = prevOverflow;
+    };
+  }, []);
+
+  useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     const g = gameRef.current;
+
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+    canvas.style.display = 'block';
+
+    let lastDw = -1;
+    let lastDh = -1;
+    function applyCanvasTransform(letterboxColor) {
+      const dpr = window.devicePixelRatio || 1;
+      const dw = Math.max(1, canvas.clientWidth);
+      const dh = Math.max(1, canvas.clientHeight);
+      if (dw !== lastDw || dh !== lastDh) {
+        lastDw = dw;
+        lastDh = dh;
+        canvas.width = Math.floor(dw * dpr);
+        canvas.height = Math.floor(dh * dpr);
+      }
+      const scale = Math.min(dw / W, dh / H);
+      const drawW = W * scale;
+      const drawH = H * scale;
+      const ox = (dw - drawW) / 2;
+      const oy = (dh - drawH) / 2;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.fillStyle = letterboxColor;
+      ctx.fillRect(0, 0, dw, dh);
+      ctx.imageSmoothingEnabled = true;
+      if (typeof ctx.imageSmoothingQuality === 'string') ctx.imageSmoothingQuality = 'high';
+      ctx.translate(ox, oy);
+      ctx.scale(scale, scale);
+    }
 
     const chickImg = new Image();
     chickImg.src = '/images/gamechick.png';
@@ -235,6 +281,8 @@ export function MiniGame() {
           ctx.beginPath(); ctx.ellipse(clx - 20, cly + 5, 20, 10, 0, 0, Math.PI * 2); ctx.fill();
           ctx.beginPath(); ctx.ellipse(clx + 22, cly + 5, 22, 10, 0, 0, Math.PI * 2); ctx.fill();
         }
+        ctx.fillStyle = s.bg[1];
+        ctx.fillRect(0, GY, W, 36);
       }
       ctx.fillStyle = s.ground; ctx.fillRect(0, GY + 36, W, H - GY - 36);
       ctx.strokeStyle = s.accent; ctx.lineWidth = 2;
@@ -246,6 +294,7 @@ export function MiniGame() {
       const chickImgEl = chickImgRef.current;
       if (chickImgEl && chickImgEl.complete && chickImgEl.naturalWidth) {
         ctx.imageSmoothingEnabled = true;
+        if (typeof ctx.imageSmoothingQuality === 'string') ctx.imageSmoothingQuality = 'high';
         const cw = 60;
         const ch = 60;
         ctx.drawImage(chickImgEl, bx - cw / 2, by - ch / 2 + 14, cw, ch);
@@ -333,8 +382,9 @@ export function MiniGame() {
     }
 
     function loop() {
-      ctx.clearRect(0, 0, W, H);
       const s = getStage();
+      applyCanvasTransform(s.dark ? s.bg[0] : s.bg[1]);
+      ctx.clearRect(0, 0, W, H);
       if (g.state === 'running' && !g.stageComplete && !g.quizActive) {
         g.dist += s.speed; g.bgOffset += s.speed;
         g.obstacles.forEach((o) => { o.x = o.ox - g.dist; });
@@ -391,30 +441,85 @@ export function MiniGame() {
   const lifeColor = uiState.lives === 1 ? '#e53935' : uiState.lives === 2 ? '#f57c00' : '#2e7d32';
 
   return (
-    <div style={{ fontFamily: 'Noto Sans KR, sans-serif', maxWidth: 980, margin: '40px auto', padding: '0 16px' }}>
-      <h2 style={{ marginBottom: 12, fontSize: 20, fontWeight: 900 }}>자바 퀴즈 미니게임</h2>
+    <div style={{
+      position: 'fixed',
+      top: 0, left: 0, right: 0, bottom: 0,
+      zIndex: 500,
+      overflow: 'hidden',
+      fontFamily: 'Noto Sans KR, sans-serif',
+    }}>
+      <button
+        type="button"
+        onClick={() => (onBack ? onBack() : navigate('/minigame'))}
+        style={{
+          position: 'absolute',
+          top: 16, right: 16,
+          padding: '8px 18px',
+          borderRadius: 12,
+          border: '2px solid #e0d0b0',
+          background: 'rgba(255,255,255,0.85)',
+          cursor: 'pointer',
+          fontSize: 14,
+          fontWeight: 900,
+          color: '#5c3d1e',
+          zIndex: 600,
+        }}
+      >
+        ← 돌아가기
+      </button>
+      <canvas
+        ref={canvasRef}
+        width={W}
+        height={H}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          width: '100%',
+          height: '100%',
+          display: 'block',
+          cursor: 'pointer',
+          touchAction: 'none',
+        }}
+      />
+      <div style={{
+        position: 'absolute',
+        top: 52,
+        left: 12,
+        right: 12,
+        zIndex: 550,
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        pointerEvents: 'none',
+        textShadow: '0 1px 3px rgba(0,0,0,0.75)',
+      }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <span style={{ fontSize: 12, fontWeight: 900, padding: '4px 10px', borderRadius: 20, background: `${uiState.color}e6`, color: '#fff' }}>
+            {uiState.stage}
+          </span>
+          <span style={{ fontSize: 12, color: '#fff', fontWeight: 800 }}>
+            진행: <b>{uiState.prog}%</b>
+          </span>
+        </div>
+        <span style={{ fontSize: 12, color: '#fff', fontWeight: 800 }}>
+          목숨: <b style={{ color: lifeColor }}>{lifeText}</b>
+        </span>
+      </div>
 
-      {/* 캔버스 + 퀴즈 오버레이를 감싸는 relative 컨테이너 */}
-      <div style={{ position: 'relative' }}>
-        <canvas
-          ref={canvasRef}
-          width={W}
-          height={H}
-          style={{ display: 'block', width: '100%', borderRadius: 12, border: '1px solid #e0e0e0', cursor: 'pointer' }}
-        />
-
-        {/* 퀴즈 오버레이 - 캔버스 위에 반투명하게 */}
-        {quizState.visible && (
+      {quizState.visible && (
           <div style={{
             position: 'absolute',
-            bottom: 0,
             left: 0,
             right: 0,
-            background: 'rgba(255, 255, 255, 0.88)',
+            bottom: 0,
+            zIndex: 550,
+            maxHeight: 'min(48vh, 420px)',
+            overflow: 'auto',
+            background: 'rgba(255, 255, 255, 0.92)',
             backdropFilter: 'blur(6px)',
-            borderRadius: '0 0 12px 12px',
             padding: '14px 18px',
             borderTop: '1px solid rgba(0,0,0,0.1)',
+            boxSizing: 'border-box',
           }}>
             <div style={{ fontSize: 13, color: '#555', marginBottom: 8, fontWeight: 900 }}>
               이 Java 코드의 출력 결과는?
@@ -462,24 +567,7 @@ export function MiniGame() {
               </div>
             )}
           </div>
-        )}
-      </div>
-
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 2px 0' }}>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <span style={{ fontSize: 12, fontWeight: 900, padding: '2px 10px', borderRadius: 20, background: `${uiState.color}33`, color: uiState.color }}>
-            {uiState.stage}
-          </span>
-          <span style={{ fontSize: 12, color: '#666', fontWeight: 800 }}>
-            진행: <b style={{ color: '#333' }}>{uiState.prog}%</b>
-          </span>
-        </div>
-        <div>
-          <span style={{ fontSize: 12, color: '#666', fontWeight: 800 }}>
-            목숨: <b style={{ color: lifeColor }}>{lifeText}</b>
-          </span>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
