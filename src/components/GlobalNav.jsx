@@ -1,20 +1,75 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { supabase } from '../supabaseClient';
 
-// ============================================================
-// GlobalNav: 모든 페이지 상단에 렌더링되는 전역 네비게이션 바
-// props:
-//   onOpenSettings - 설정 모달 열기 (App.jsx에서 전달)
-//   onOpenAuth     - 로그인/회원가입 모달 열기 (App.jsx에서 전달)
-//   t              - 다국어 번역 함수 (App.jsx에서 전달)
-// 주의: /quiz 페이지에서는 네브바 전체가 숨겨짐
-// ============================================================
 export function GlobalNav({ onOpenSettings, onOpenAuth, t }) {
-  const [menuOpen, setMenuOpen] = useState(false); // 햄버거 메뉴 열림/닫힘 상태
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [newName, setNewName] = useState('');
   const navRef = useRef(null);
-  const location = useLocation(); // 현재 페이지 경로 감지용
+  const location = useLocation();
 
-  // 메뉴 바깥 클릭 시 자동으로 닫힘
+  // 로그인 상태 감지
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      if (session?.user) fetchProfile(session.user.id);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) fetchProfile(session.user.id);
+      else setProfile(null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  async function fetchProfile(userId) {
+    const { data } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+    if (data) setProfile(data);
+  }
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    setShowProfileMenu(false);
+  }
+
+  async function handleNameUpdate() {
+    if (!newName.trim()) return;
+    const { error } = await supabase
+      .from('profiles')
+      .update({ username: newName })
+      .eq('id', user.id);
+    if (!error) {
+      setProfile(prev => ({ ...prev, username: newName }));
+      setEditMode(false);
+      setNewName('');
+    }
+  }
+
+  async function handleAvatarChange(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const fileExt = file.name.split('.').pop();
+    const filePath = `${user.id}/avatar.${fileExt}`;
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(filePath, file, { upsert: true });
+    if (!uploadError) {
+      const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
+      await supabase.from('profiles').update({ avatar_url: data.publicUrl }).eq('id', user.id);
+      setProfile(prev => ({ ...prev, avatar_url: data.publicUrl }));
+    }
+  }
+
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (navRef.current && !navRef.current.contains(e.target)) {
@@ -27,13 +82,12 @@ export function GlobalNav({ onOpenSettings, onOpenAuth, t }) {
 
   return (
     <>
-      {/* 햄버거 메뉴 버튼 - /quiz 페이지에서는 숨김 */}
-      <button 
-        id="globalMenuBtn" 
-        className="global-menu-btn" 
+      <button
+        id="globalMenuBtn"
+        className="global-menu-btn"
         title="Menu"
         onClick={(e) => {
-          e.stopPropagation(); // 바깥 클릭 감지 이벤트와 충돌 방지
+          e.stopPropagation();
           setMenuOpen(!menuOpen);
         }}
         style={{ display: location.pathname === '/quiz' ? 'none' : 'block' }}
@@ -41,19 +95,11 @@ export function GlobalNav({ onOpenSettings, onOpenAuth, t }) {
         ☰
       </button>
 
-      {/* 네브바 본체 - /quiz 페이지에서는 렌더링 안 함 */}
       {location.pathname !== '/quiz' && (
         <nav className={`main-nav ${menuOpen ? 'show' : ''}`} id="globalNav" ref={navRef}>
           <div className="nav-logo">
-            <Link style={{color:'inherit', textDecoration:'none'}} to="/">{t('nav_logo')}</Link>
+            <Link style={{ color: 'inherit', textDecoration: 'none' }} to="/">{t('nav_logo')}</Link>
           </div>
-
-          {/* 페이지 이동 링크 목록
-              /         - 홈
-              /quiz     - 코딩 게임 (네브바 숨겨짐)
-              /note     - 노트
-              /pattern  - 패턴 분석
-              /minigame - 미니게임 */}
           <ul className="nav-links">
             <li><Link to="/">{t('nav_home')}</Link></li>
             <li><Link to="/quiz">문제풀기</Link></li>
@@ -64,14 +110,126 @@ export function GlobalNav({ onOpenSettings, onOpenAuth, t }) {
         </nav>
       )}
 
-      {/* 우측 상단 버튼 영역 - /quiz 페이지에서는 렌더링 안 함 */}
       {location.pathname !== '/quiz' && (
         <div className="top-control-layer">
           <div className="top-right-controls">
-            {/* 설정 버튼 → onOpenSettings() 호출 → App.jsx에서 설정 모달 열림 */}
             <button id="globalSettingsBtn" className="settings-btn" title="Settings" onClick={onOpenSettings}>⚙️</button>
-            {/* 로그인 버튼 → onOpenAuth() 호출 → App.jsx에서 AuthModal.jsx 열림 */}
-            <img src="/images/login.png" alt="Login" id="loginBtn" className="login-btn" title="Login" onClick={onOpenAuth} />
+
+            {user ? (
+              // 로그인 상태
+              <div style={{ position: 'relative' }}>
+                <div
+                  onClick={() => setShowProfileMenu(!showProfileMenu)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    cursor: 'pointer', background: 'rgba(255,248,216,0.9)',
+                    border: '3px solid #5d4037', borderRadius: 40,
+                    padding: '6px 14px', boxShadow: '0 4px 0 #3e2723',
+                  }}
+                >
+                  <img
+                    src={profile?.avatar_url || '/images/chick.png'}
+                    alt="프로필"
+                    style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', border: '2px solid #5d4037' }}
+                  />
+                  <span style={{ fontSize: 13, fontWeight: 900, color: '#5d4037' }}>
+                    {profile?.username || user.email?.split('@')[0] || '삐약이'}
+                  </span>
+                </div>
+
+                {showProfileMenu && (
+                  <div style={{
+                    position: 'absolute', right: 0, top: 50,
+                    background: '#fdf6e3', border: '3px solid #5d4037',
+                    borderRadius: 16, padding: 20, width: 220,
+                    boxShadow: '6px 6px 0 #3e2723', zIndex: 9999,
+                  }}>
+                    {/* 프로필 사진 변경 */}
+                    <div style={{ textAlign: 'center', marginBottom: 12 }}>
+                      <img
+                        src={profile?.avatar_url || '/images/chick.png'}
+                        alt="프로필"
+                        style={{ width: 70, height: 70, borderRadius: '50%', objectFit: 'cover', border: '3px solid #5d4037' }}
+                      />
+                      <label style={{ display: 'block', marginTop: 6, fontSize: 12, color: '#8d6e63', cursor: 'pointer', fontWeight: 'bold' }}>
+                        📷 사진 변경
+                        <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarChange} />
+                      </label>
+                    </div>
+
+                    {/* 이름 변경 */}
+                    {editMode ? (
+                      <div style={{ marginBottom: 12 }}>
+                        <input
+                          value={newName}
+                          onChange={e => setNewName(e.target.value)}
+                          placeholder="새 이름 입력"
+                          style={{
+                            width: '100%', padding: '6px 10px', borderRadius: 8,
+                            border: '2px solid #8d6e63', marginBottom: 6, fontSize: 13,
+                          }}
+                        />
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button
+                            onClick={handleNameUpdate}
+                            style={{
+                              flex: 1, padding: '6px', borderRadius: 8,
+                              background: '#5d4037', color: 'white', border: 'none',
+                              cursor: 'pointer', fontSize: 12, fontWeight: 'bold',
+                            }}
+                          >저장</button>
+                          <button
+                            onClick={() => setEditMode(false)}
+                            style={{
+                              flex: 1, padding: '6px', borderRadius: 8,
+                              background: '#e0d0b0', color: '#5d4037', border: 'none',
+                              cursor: 'pointer', fontSize: 12, fontWeight: 'bold',
+                            }}
+                          >취소</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => { setEditMode(true); setNewName(profile?.username || ''); }}
+                        style={{
+                          width: '100%', padding: '8px', borderRadius: 8, marginBottom: 8,
+                          background: '#fdf6e3', border: '2px solid #8d6e63',
+                          cursor: 'pointer', fontSize: 13, fontWeight: 'bold', color: '#5d4037',
+                        }}
+                      >✏️ 이름 변경</button>
+                    )}
+
+                    {/* 로그아웃 */}
+                    <button
+                      onClick={handleLogout}
+                      style={{
+                        width: '100%', padding: '8px', borderRadius: 8,
+                        background: '#ef9a9a', border: '2px solid #c62828',
+                        cursor: 'pointer', fontSize: 13, fontWeight: 'bold', color: '#c62828',
+                      }}
+                    >🚪 로그아웃</button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              // 비로그인 상태 - 게스트
+              <div
+                onClick={onOpenAuth}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  cursor: 'pointer', background: 'rgba(255,248,216,0.9)',
+                  border: '3px solid #5d4037', borderRadius: 40,
+                  padding: '6px 14px', boxShadow: '0 4px 0 #3e2723',
+                }}
+              >
+                <img
+                  src="/images/chick.png"
+                  alt="게스트"
+                  style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', border: '2px solid #5d4037' }}
+                />
+                <span style={{ fontSize: 13, fontWeight: 900, color: '#5d4037' }}>로그인/회원가입</span>
+              </div>
+            )}
           </div>
         </div>
       )}
