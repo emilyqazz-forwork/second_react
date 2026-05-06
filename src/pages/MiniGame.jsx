@@ -50,8 +50,6 @@ export function MiniGame() {
         <style>{`
           .buggame-stage { position: fixed; inset: 0; background: url('/images/게임배경.png') center / cover no-repeat; overflow: hidden; display: flex; justify-content: center; padding: 16px; }
           .buggame-shell { width: 100%; max-width: 980px; height: 100%; position: relative; }
-          .buggame-back { position: absolute; top: 14px; left: 14px; z-index: 2000; padding: 10px 14px; border-radius: 999px; border: 1px solid rgba(0,0,0,0.15); background: rgba(255,255,255,0.85); color: #111; font-weight: 900; cursor: pointer; backdrop-filter: blur(6px); }
-          .buggame-back:hover { background: rgba(255,255,255,0.95); }
           .bug-game-container { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; }
           .game-hud { position: absolute; top: 0; left: 0; width: 100%; height: 60px; background: rgba(0,0,0,0.55); color: #fff; display: flex; justify-content: space-around; align-items: center; font-weight: 900; z-index: 100; }
           .game-chick { position: absolute; width: 110px; height: 110px; transform: translateX(-50%); z-index: 50; }
@@ -63,10 +61,7 @@ export function MiniGame() {
         `}</style>
         <div className="buggame-stage">
           <div className="buggame-shell">
-            <button type="button" className="buggame-back" onClick={() => setSelectedGame(null)}>
-              ← 돌아가기
-            </button>
-            <BugGame />
+            <BugGame onBack={() => setSelectedGame(null)} />
           </div>
         </div>
       </div>
