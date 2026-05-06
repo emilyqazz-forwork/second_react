@@ -6,11 +6,18 @@ const H = 700;
 const MAX_MISS = 5;
 const MAX_FALLING_WORDS = 3;
 const SPAWN_INTERVAL_FRAMES = 48;
+const MAX_FALLING_POWERUPS = 1;
+const POWERUP_SPAWN_CHANCE = 0.03; // 간간히 떨어지도록 (추가로 스테이지당 2개 제한)
+const POWERUP_COOLDOWN_FRAMES = 240; // 한 번 떨어지면 잠깐 쉬기
+const SLOW_DURATION_MS = 5500;
+const MAGNET_DURATION_MS = 5500;
+const SLOW_FALL_MULT = 0.55;
+const MAX_POWERUPS_PER_STAGE = 2;
 
 const STAGE_CONFIG = [
-  { stage: 1, duration: 20, speed: [0.85, 1.15], label: 'STAGE 1' },
-  { stage: 2, duration: 20, speed: [2.5, 3.2], label: 'STAGE 2' },
-  { stage: 3, duration: 20, speed: [3.5, 4.5], label: 'STAGE 3' },
+  { stage: 1, duration: 40, speed: [0.85, 1.15], label: 'STAGE 1' },
+  { stage: 2, duration: 40, speed: [2.5, 3.2], label: 'STAGE 2' },
+  { stage: 3, duration: 40, speed: [3.5, 4.5], label: 'STAGE 3' },
 ];
 
 const STAGE_WORDS = {
@@ -76,6 +83,7 @@ export default function BugGame({ onBack }) {
     phase: 'idle',
     chick: { x: W / 2, y: H - 80 },
     words: [],
+    powerups: [],
     score: 0,
     miss: 0,
     stageIdx: 0,
@@ -84,13 +92,22 @@ export default function BugGame({ onBack }) {
     pool: [],
     poolIndex: 0,
     spawnTimer: 0,
+    powerupCooldown: 0,
+    powerupsSpawnedThisStage: 0,
+    lastPowerupKind: null,
     timerInterval: null,
     nextId: 0,
     flashTimer: 0,
+    shieldFxTimer: 0,
+    shieldFxX: 0,
+    shieldFxY: 0,
     stageTransition: 0,
+    shieldCharges: 0,
+    slowUntil: 0,
+    magnetUntil: 0,
   });
   const [uiScore, setUiScore] = useState(0);
-  const [uiTime, setUiTime] = useState(20);
+  const [uiTime, setUiTime] = useState(STAGE_CONFIG[0].duration);
   const [uiMiss, setUiMiss] = useState(0);
   const [uiStage, setUiStage] = useState(1);
   const [uiPhase, setUiPhase] = useState('idle');
@@ -159,7 +176,11 @@ export default function BugGame({ onBack }) {
       g.stageIdx = idx;
       g.timeLeft = STAGE_CONFIG[idx].duration;
       g.words = [];
+      g.powerups = [];
       g.spawnTimer = 0;
+      g.powerupCooldown = 0;
+      g.powerupsSpawnedThisStage = 0;
+      g.lastPowerupKind = null;
       g.pool = shuffle(STAGE_WORDS[idx + 1]);
       g.poolIndex = 0;
       setUiStage(idx + 1);
@@ -188,8 +209,17 @@ export default function BugGame({ onBack }) {
       g.chick = { x: W / 2, y: H - 80 };
       g.score = 0;
       g.miss = 0;
+      g.words = [];
+      g.powerups = [];
       g.flashTimer = 0;
+      g.shieldFxTimer = 0;
       g.stageTransition = 0;
+      g.powerupCooldown = 0;
+      g.powerupsSpawnedThisStage = 0;
+      g.lastPowerupKind = null;
+      g.shieldCharges = 0;
+      g.slowUntil = 0;
+      g.magnetUntil = 0;
       setUiScore(0);
       setUiMiss(0);
       setUiPhase('playing');
@@ -213,6 +243,47 @@ export default function BugGame({ onBack }) {
         y: -30,
         speed,
       });
+    }
+
+    function spawnPowerup() {
+      if (g.powerups.length >= MAX_FALLING_POWERUPS) return;
+      if (g.powerupsSpawnedThisStage >= MAX_POWERUPS_PER_STAGE) return;
+      if (g.powerupCooldown > 0) return;
+      if (Math.random() > POWERUP_SPAWN_CHANCE) return;
+
+      const kinds = ['shield', 'slow', 'magnet'];
+      let kind = kinds[Math.floor(Math.random() * kinds.length)];
+      // prevent consecutive same powerup (reroll once; 3 kinds => enough variety)
+      if (g.lastPowerupKind && kind === g.lastPowerupKind) {
+        kind = kinds[(kinds.indexOf(kind) + 1 + Math.floor(Math.random() * 2)) % kinds.length];
+      }
+      const icon = kind === 'shield' ? '🛡️' : kind === 'slow' ? '⏰' : '🧲';
+      g.powerups.push({
+        id: g.nextId++,
+        kind,
+        icon,
+        x: 100 + Math.random() * (W - 200),
+        y: -30,
+        speed: 2.4 + Math.random() * 0.8,
+      });
+      g.powerupCooldown = POWERUP_COOLDOWN_FRAMES;
+      g.powerupsSpawnedThisStage += 1;
+      g.lastPowerupKind = kind;
+    }
+
+    function applyPowerup(kind) {
+      const now = Date.now();
+      if (kind === 'shield') {
+        g.shieldCharges = 1;
+        return;
+      }
+      if (kind === 'slow') {
+        g.slowUntil = Math.max(g.slowUntil, now) + SLOW_DURATION_MS;
+        return;
+      }
+      if (kind === 'magnet') {
+        g.magnetUntil = Math.max(g.magnetUntil, now) + MAGNET_DURATION_MS;
+      }
     }
 
     const onKey = (e) => {
@@ -249,6 +320,11 @@ export default function BugGame({ onBack }) {
       ctx.fillRect(0, H - 50, W, 50);
 
       if (g.phase === 'playing') {
+        const now = Date.now();
+        const slowActive = now < g.slowUntil;
+        const magnetActive = now < g.magnetUntil;
+        const fallMult = slowActive ? SLOW_FALL_MULT : 1;
+
         if (g.keys.left) g.chick.x = Math.max(50, g.chick.x - 8);
         if (g.keys.right) g.chick.x = Math.min(W - 50, g.chick.x + 8);
 
@@ -257,10 +333,17 @@ export default function BugGame({ onBack }) {
           g.spawnTimer = 0;
           spawnWord();
         }
+        if (g.powerupCooldown > 0) g.powerupCooldown -= 1;
+        spawnPowerup();
 
         const remaining = [];
         for (const w of g.words) {
-          w.y += w.speed;
+          w.y += w.speed * fallMult;
+          if (magnetActive && w.isBug) {
+            // bug code pulls toward chick
+            const dx = g.chick.x - w.x;
+            w.x += Math.max(-7, Math.min(7, dx * 0.06));
+          }
 
           const hit =
             Math.abs(w.x - g.chick.x) < 90 &&
@@ -270,13 +353,20 @@ export default function BugGame({ onBack }) {
             if (w.isBug) {
               g.score += 10;
             } else {
-              g.miss += 1;
-              g.flashTimer = 20;
-              setUiMiss(g.miss);
-              if (g.miss >= MAX_MISS) {
-                clearInterval(g.timerInterval);
-                g.phase = 'gameover';
-                setUiPhase('gameover');
+              if (g.shieldCharges > 0) {
+                g.shieldCharges -= 1;
+                g.shieldFxTimer = 22;
+                g.shieldFxX = g.chick.x;
+                g.shieldFxY = g.chick.y;
+              } else {
+                g.miss += 1;
+                g.flashTimer = 20;
+                setUiMiss(g.miss);
+                if (g.miss >= MAX_MISS) {
+                  clearInterval(g.timerInterval);
+                  g.phase = 'gameover';
+                  setUiPhase('gameover');
+                }
               }
             }
             setUiScore(g.score);
@@ -299,6 +389,20 @@ export default function BugGame({ onBack }) {
           }
         }
         g.words = remaining;
+
+        const pRemaining = [];
+        for (const p of g.powerups) {
+          p.y += p.speed;
+          const hit =
+            Math.abs(p.x - g.chick.x) < 90 &&
+            Math.abs(p.y - g.chick.y) < 45;
+          if (hit) {
+            applyPowerup(p.kind);
+            continue;
+          }
+          if (p.y < H + 20) pRemaining.push(p);
+        }
+        g.powerups = pRemaining;
       }
 
       if (g.phase === 'stageclear') {
@@ -324,6 +428,21 @@ export default function BugGame({ onBack }) {
         ctx.fillText(w.text, w.x, w.y + 5);
       }
 
+      // powerup icons (fall like bugs)
+      for (const p of g.powerups) {
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.beginPath();
+        ctx.roundRect(p.x - 22, p.y - 22, 44, 44, 14);
+        ctx.fill();
+        ctx.strokeStyle = '#8d6e63';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.font = '26px serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#111';
+        ctx.fillText(p.icon, p.x, p.y + 10);
+      }
+
       const img = chickImgRef.current;
       if (img && img.complete && img.naturalWidth) {
         ctx.imageSmoothingEnabled = true;
@@ -339,6 +458,15 @@ export default function BugGame({ onBack }) {
         ctx.fillStyle = `rgba(255,0,0,${g.flashTimer / 20 * 0.45})`;
         ctx.fillRect(0, 0, W, H);
         g.flashTimer--;
+      }
+      if (g.shieldFxTimer > 0) {
+        ctx.fillStyle = `rgba(46,125,50,${g.shieldFxTimer / 22 * 0.22})`;
+        ctx.fillRect(0, 0, W, H);
+        ctx.font = 'bold 18px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = 'rgba(255,255,255,0.95)';
+        ctx.fillText('🛡️ 보호!', g.shieldFxX, g.shieldFxY - 70);
+        g.shieldFxTimer--;
       }
 
       ctx.fillStyle = 'rgba(255,255,255,0.88)';
@@ -357,6 +485,33 @@ export default function BugGame({ onBack }) {
       ctx.fillStyle = g.miss >= 3 ? '#e53935' : '#3e2723';
       const hearts = '❤️'.repeat(MAX_MISS - g.miss) + '🖤'.repeat(g.miss);
       ctx.fillText(`목숨: ${hearts}`, 28, 88);
+
+      // Active powerups indicator
+      if (g.phase === 'playing') {
+        const now = Date.now();
+        const badges = [];
+        if (g.shieldCharges > 0) badges.push({ t: `🛡️ x${g.shieldCharges}`, col: '#2e7d32' });
+        if (now < g.slowUntil) badges.push({ t: '⏰ SLOW', col: '#1565c0' });
+        if (now < g.magnetUntil) badges.push({ t: '🧲 MAGNET', col: '#6a1b9a' });
+        if (badges.length) {
+          let bx = 250;
+          for (const b of badges) {
+            ctx.font = 'bold 13px sans-serif';
+            const bw = ctx.measureText(b.t).width + 18;
+            ctx.fillStyle = 'rgba(255,255,255,0.9)';
+            ctx.beginPath();
+            ctx.roundRect(bx, 18, bw, 22, 10);
+            ctx.fill();
+            ctx.strokeStyle = b.col;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.fillStyle = '#222';
+            ctx.textAlign = 'left';
+            ctx.fillText(b.t, bx + 9, 35);
+            bx += bw + 8;
+          }
+        }
+      }
 
       if (g.phase === 'stageclear') {
         ctx.fillStyle = 'rgba(0,0,0,0.5)';
