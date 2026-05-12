@@ -83,15 +83,15 @@ const STAGE_QUIZZES = [
 ];
 
 const STAGES = [
-  { name: 'STAGE 1', bg: ['#e8f4e8', '#c8e6c8'], ground: '#7cb87c', accent: '#5a9b5a', speed: 3.8, color: '#5a9b5a', stageLen: 1600, gap: 250, dark: false, bgImg: '/images/jump/bg-1.svg' },
-  { name: 'STAGE 2', bg: ['#e8eef8', '#c0d4f0'], ground: '#6688cc', accent: '#4466aa', speed: 5, color: '#4466aa', stageLen: 1800, gap: 220, dark: false, bgImg: '/images/jump/bg-2.svg' },
-  { name: 'STAGE 3', bg: ['#f8f0e0', '#f0d8b0'], ground: '#c8944a', accent: '#a07030', speed: 6.1, color: '#c8944a', stageLen: 2000, gap: 190, dark: false, bgImg: '/images/jump/bg-3.svg' },
-  { name: 'STAGE 4', bg: ['#f0e8f8', '#d8c0f0'], ground: '#9966cc', accent: '#7744aa', speed: 7.2, color: '#9966cc', stageLen: 2200, gap: 170, dark: false, bgImg: '/images/jump/bg-4.svg' },
-  { name: 'STAGE 5', bg: ['#f8e8e8', '#f0c0c0'], ground: '#cc5555', accent: '#aa3333', speed: 8.4, color: '#cc5555', stageLen: 2400, gap: 150, dark: false, bgImg: '/images/jump/bg-5.svg' },
-  { name: 'STAGE 6', bg: ['#e0f0f8', '#b0d8f0'], ground: '#3399bb', accent: '#1177aa', speed: 9.6, color: '#3399bb', stageLen: 2600, gap: 135, dark: false, bgImg: '/images/jump/bg-6.svg' },
-  { name: 'STAGE 7', bg: ['#1a1a2e', '#16213e'], ground: '#e94560', accent: '#c73652', speed: 10.8, color: '#e94560', stageLen: 2800, gap: 122, dark: true, bgImg: '/images/jump/bg-7.svg' },
-  { name: 'STAGE 8', bg: ['#0a0a0a', '#111111'], ground: '#ff6600', accent: '#dd4400', speed: 12, color: '#ff6600', stageLen: 3000, gap: 112, dark: true, bgImg: '/images/jump/bg-8.svg' },
-  { name: 'STAGE 9', bg: ['#000000', '#0a000a'], ground: '#ff00ff', accent: '#cc00cc', speed: 13.5, color: '#ff44ff', stageLen: 3400, gap: 102, dark: true, bgImg: '/images/jump/bg-9.svg' },
+  { name: 'STAGE 1', bg: ['#e8f4e8', '#c8e6c8'], ground: '#7cb87c', accent: '#5a9b5a', speed: 3.8, color: '#5a9b5a', stageLen: 1600, gap: 250, dark: false, bgImg: '/images/jump/level1.svg' },
+  { name: 'STAGE 2', bg: ['#e8eef8', '#c0d4f0'], ground: '#6688cc', accent: '#4466aa', speed: 5, color: '#4466aa', stageLen: 1800, gap: 220, dark: false, bgImg: '/images/jump/level2.svg' },
+  { name: 'STAGE 3', bg: ['#f8f0e0', '#f0d8b0'], ground: '#c8944a', accent: '#a07030', speed: 6.1, color: '#c8944a', stageLen: 2000, gap: 190, dark: false, bgImg: '/images/jump/level3.svg' },
+  { name: 'STAGE 4', bg: ['#f0e8f8', '#d8c0f0'], ground: '#9966cc', accent: '#7744aa', speed: 7.2, color: '#9966cc', stageLen: 2200, gap: 170, dark: false, bgImg: '/images/jump/level4.svg' },
+  { name: 'STAGE 5', bg: ['#f8e8e8', '#f0c0c0'], ground: '#cc5555', accent: '#aa3333', speed: 8.4, color: '#cc5555', stageLen: 2400, gap: 150, dark: false, bgImg: '/images/jump/level5.svg' },
+  { name: 'STAGE 6', bg: ['#e0f0f8', '#b0d8f0'], ground: '#3399bb', accent: '#1177aa', speed: 9.6, color: '#3399bb', stageLen: 2600, gap: 135, dark: false, bgImg: '/images/jump/level6.svg' },
+  { name: 'STAGE 7', bg: ['#1a1a2e', '#16213e'], ground: '#e94560', accent: '#c73652', speed: 10.8, color: '#e94560', stageLen: 2800, gap: 122, dark: true, bgImg: '/images/jump/level7.svg' },
+  { name: 'STAGE 8', bg: ['#0a0a0a', '#111111'], ground: '#ff6600', accent: '#dd4400', speed: 12, color: '#ff6600', stageLen: 3000, gap: 112, dark: true, bgImg: '/images/jump/level8.svg' },
+  { name: 'STAGE 9', bg: ['#000000', '#0a000a'], ground: '#ff00ff', accent: '#cc00cc', speed: 13.5, color: '#ff44ff', stageLen: 3400, gap: 102, dark: true, bgImg: '/images/jump/level9.svg' },
 ];
 
 function roundedRect(ctx, x, y, w, h, r) {
@@ -547,7 +547,7 @@ export function MiniGame({ onBack }) {
         ctx.fillText('⬇ 슬라이드', o.x + o.w / 2, o.y + o.h / 2 + 5);
         return;
       }
-      const src = o.type === 'snake' ? '/images/jump/obs-snake.svg' : '/images/jump/obs-bug.svg';
+      const src = o.type === 'snake' ? '/images/jump/rock2.svg' : '/images/jump/rock1.svg';
       const img = getImg(src);
       if (img && img.complete && img.naturalWidth) {
         ctx.imageSmoothingEnabled = true;
@@ -565,7 +565,7 @@ export function MiniGame({ onBack }) {
 
     function drawCoin(c) {
       if (c.taken) return;
-      const img = getImg('/images/jump/item-coin.svg');
+      const img = getImg('/images/jump/coin.svg');
       if (img && img.complete && img.naturalWidth) {
         ctx.drawImage(img, c.x - 14, c.y - 14, 28, 28);
         return;

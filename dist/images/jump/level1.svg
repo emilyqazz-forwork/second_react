@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="220" viewBox="0 0 960 220">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e9fff0"/>
+      <stop offset="1" stop-color="#bfeec8"/>
+    </linearGradient>
+  </defs>
+  <rect width="960" height="220" fill="url(#sky)"/>
+  <g fill="rgba(255,255,255,0.75)">
+    <ellipse cx="140" cy="50" rx="50" ry="16"/>
+    <ellipse cx="110" cy="58" rx="28" ry="14"/>
+    <ellipse cx="175" cy="60" rx="34" ry="14"/>
+    <ellipse cx="520" cy="40" rx="58" ry="18"/>
+    <ellipse cx="490" cy="50" rx="30" ry="14"/>
+    <ellipse cx="555" cy="52" rx="38" ry="14"/>
+    <ellipse cx="820" cy="64" rx="50" ry="16"/>
+    <ellipse cx="790" cy="72" rx="28" ry="14"/>
+    <ellipse cx="855" cy="74" rx="34" ry="14"/>
+  </g>
+  <g>
+    <circle cx="82" cy="82" r="10" fill="#fff6a8" opacity="0.85"/>
+    <circle cx="82" cy="82" r="18" fill="#fff6a8" opacity="0.18"/>
+  </g>
+  <g fill="#8bd48f" opacity="0.55">
+    <path d="M0 170c90-40 170-10 250-20s150-45 250-25 140 35 220 20 150-30 240-10v85H0z"/>
+  </g>
+</svg>
