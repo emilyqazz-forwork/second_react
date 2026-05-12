@@ -3,7 +3,7 @@
 let audio = null;
 
 export function homeBgmTrackSrc(track) {
-  return track === 'pixel' ? '/BGM픽셀로파이st.mp3' : '/BGM오두막st.mp3';
+  return track === 'pixel' ? '/audio/bgm/BGM픽셀로파이st.mp3' : '/audio/bgm/BGM오두막st.mp3';
 }
 
 /**

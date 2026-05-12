@@ -36,7 +36,7 @@ export function GlobalNav({ onOpenSettings, onOpenAuth, t, params, setParams }) 
 
     const audio = bgmRef.current;
     const track = safeParams.bgmTrack === 'pixel' ? 'pixel' : 'cabin';
-    const src = track === 'pixel' ? '/audio/BGM픽셀로파이st.mp3' : '/audio/BGM오두막st.mp3';
+    const src = track === 'pixel' ? '/audio/bgm/BGM픽셀로파이st.mp3' : '/audio/bgm/BGM오두막st.mp3';
     const desiredHref = new URL(src, window.location.origin).href;
 
     // NOTE: 한글 파일명은 브라우저가 자동으로 URL 인코딩하므로, 항상 절대 href로 비교/설정해야 재로딩(재시작)을 피할 수 있음.

@@ -127,7 +127,7 @@ export default function StairGame({ onBack }) {
     chickImgRef.current = chickImg;
 
     const stairJumpSfx = new Audio();
-    stairJumpSfx.src = new URL('/audio/stairjump.mp3', window.location.origin).href;
+    stairJumpSfx.src = new URL('/audio/stair/stairjump.mp3', window.location.origin).href;
     stairJumpSfx.volume = 0.65;
     stairJumpSfx.load();
 
@@ -143,10 +143,10 @@ export default function StairGame({ onBack }) {
       a.load();
       return a;
     }
-    const stairBombSfx = makeStairSfx('/audio/stairbomb.mp3');
-    const dizzyStairsSfx = makeStairSfx('/audio/dizzystairs.mp3');
-    const stairBoingSfx = makeStairSfx('/audio/stairboing.mp3');
-    const stairFallingSfx = makeStairSfx('/audio/stairfalling.mp3');
+    const stairBombSfx = makeStairSfx('/audio/stair/stairbomb.mp3');
+    const dizzyStairsSfx = makeStairSfx('/audio/stair/dizzystair.mp3');
+    const stairBoingSfx = makeStairSfx('/audio/stair/stairboing.mp3');
+    const stairFallingSfx = makeStairSfx('/audio/stair/stairfalling.mp3');
 
     function playStairBomb() {
       stairBombSfx.currentTime = 0;

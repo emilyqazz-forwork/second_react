@@ -173,12 +173,12 @@ export default function BugGame({ onBack }) {
     chickImgRef.current = chickImg;
 
     const correctBugsSfx = new Audio();
-    correctBugsSfx.src = new URL('/audio/correctbugs.mp3', window.location.origin).href;
+    correctBugsSfx.src = new URL('/audio/bugs/correctbugs.mp3', window.location.origin).href;
     correctBugsSfx.volume = 0.65;
     correctBugsSfx.load();
 
     const errorBugsSfx = new Audio();
-    errorBugsSfx.src = new URL('/audio/errorbugs.mp3', window.location.origin).href;
+    errorBugsSfx.src = new URL('/audio/bugs/errorbugs.mp3', window.location.origin).href;
     errorBugsSfx.volume = 0.65;
     errorBugsSfx.load();
 

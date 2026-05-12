@@ -154,19 +154,19 @@ export function MiniGame({ onBack }) {
     const ctx = canvas.getContext('2d');
     const g = gameRef.current;
     const coinAudio = new Audio();
-    coinAudio.src = '/audio/jumpcoin.mp3';
+    coinAudio.src = '/audio/jump/jumpcoin.mp3';
     coinAudio.volume = 0.5;
     coinAudio.load();
     coinSoundRef.current = coinAudio;
 
     const smashAudio = new Audio();
-    smashAudio.src = '/audio/jumpsmash.mp3';
+    smashAudio.src = '/audio/jump/jumpsmash.mp3';
     smashAudio.volume = 0.55;
     smashAudio.load();
     smashSoundRef.current = smashAudio;
 
     const errorAudio = new Audio();
-    errorAudio.src = '/audio/jumperror.mp3';
+    errorAudio.src = '/audio/jump/jumperror.mp3';
     errorAudio.volume = 0.55;
     errorAudio.load();
     errorSoundRef.current = errorAudio;
