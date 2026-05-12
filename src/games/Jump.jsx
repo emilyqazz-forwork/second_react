@@ -1,13 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import './Jump.css';
 
-const W = 960;
-const H = 340;
-const GY = 185;
+// Virtual game resolution (bigger => more area visible without scaling sprites up)
+const W = 1120;
+const H = 420;
+const GY = 230;
 const GRAVITY = 0.85;
 const JUMP_V = -14;
 const DBL_V = -12;
+const MAX_JUMPS = 3;
 const MAX_LIVES = 3;
+const COIN_SCORE = 10;
+const COMBO_WINDOW_MS = 2200;
+const MAX_COMBO_MULT = 3;
+const SLIDE_FRAMES = 45;
 
 const STAGE_QUIZZES = [
   [
@@ -76,15 +83,15 @@ const STAGE_QUIZZES = [
 ];
 
 const STAGES = [
-  { name: 'STAGE 1', bg: ['#e8f4e8', '#c8e6c8'], ground: '#7cb87c', accent: '#5a9b5a', speed: 3.8, color: '#5a9b5a', stageLen: 1600, gap: 250, dark: false },
-  { name: 'STAGE 2', bg: ['#e8eef8', '#c0d4f0'], ground: '#6688cc', accent: '#4466aa', speed: 5, color: '#4466aa', stageLen: 1800, gap: 220, dark: false },
-  { name: 'STAGE 3', bg: ['#f8f0e0', '#f0d8b0'], ground: '#c8944a', accent: '#a07030', speed: 6.1, color: '#c8944a', stageLen: 2000, gap: 190, dark: false },
-  { name: 'STAGE 4', bg: ['#f0e8f8', '#d8c0f0'], ground: '#9966cc', accent: '#7744aa', speed: 7.2, color: '#9966cc', stageLen: 2200, gap: 170, dark: false },
-  { name: 'STAGE 5', bg: ['#f8e8e8', '#f0c0c0'], ground: '#cc5555', accent: '#aa3333', speed: 8.4, color: '#cc5555', stageLen: 2400, gap: 150, dark: false },
-  { name: 'STAGE 6', bg: ['#e0f0f8', '#b0d8f0'], ground: '#3399bb', accent: '#1177aa', speed: 9.6, color: '#3399bb', stageLen: 2600, gap: 135, dark: false },
-  { name: 'STAGE 7', bg: ['#1a1a2e', '#16213e'], ground: '#e94560', accent: '#c73652', speed: 10.8, color: '#e94560', stageLen: 2800, gap: 122, dark: true },
-  { name: 'STAGE 8', bg: ['#0a0a0a', '#111111'], ground: '#ff6600', accent: '#dd4400', speed: 12, color: '#ff6600', stageLen: 3000, gap: 112, dark: true },
-  { name: 'STAGE 9', bg: ['#000000', '#0a000a'], ground: '#ff00ff', accent: '#cc00cc', speed: 13.5, color: '#ff44ff', stageLen: 3400, gap: 102, dark: true },
+  { name: 'STAGE 1', bg: ['#e8f4e8', '#c8e6c8'], ground: '#7cb87c', accent: '#5a9b5a', speed: 3.8, color: '#5a9b5a', stageLen: 1600, gap: 250, dark: false, bgImg: '/images/jump/bg-1.svg' },
+  { name: 'STAGE 2', bg: ['#e8eef8', '#c0d4f0'], ground: '#6688cc', accent: '#4466aa', speed: 5, color: '#4466aa', stageLen: 1800, gap: 220, dark: false, bgImg: '/images/jump/bg-2.svg' },
+  { name: 'STAGE 3', bg: ['#f8f0e0', '#f0d8b0'], ground: '#c8944a', accent: '#a07030', speed: 6.1, color: '#c8944a', stageLen: 2000, gap: 190, dark: false, bgImg: '/images/jump/bg-3.svg' },
+  { name: 'STAGE 4', bg: ['#f0e8f8', '#d8c0f0'], ground: '#9966cc', accent: '#7744aa', speed: 7.2, color: '#9966cc', stageLen: 2200, gap: 170, dark: false, bgImg: '/images/jump/bg-4.svg' },
+  { name: 'STAGE 5', bg: ['#f8e8e8', '#f0c0c0'], ground: '#cc5555', accent: '#aa3333', speed: 8.4, color: '#cc5555', stageLen: 2400, gap: 150, dark: false, bgImg: '/images/jump/bg-5.svg' },
+  { name: 'STAGE 6', bg: ['#e0f0f8', '#b0d8f0'], ground: '#3399bb', accent: '#1177aa', speed: 9.6, color: '#3399bb', stageLen: 2600, gap: 135, dark: false, bgImg: '/images/jump/bg-6.svg' },
+  { name: 'STAGE 7', bg: ['#1a1a2e', '#16213e'], ground: '#e94560', accent: '#c73652', speed: 10.8, color: '#e94560', stageLen: 2800, gap: 122, dark: true, bgImg: '/images/jump/bg-7.svg' },
+  { name: 'STAGE 8', bg: ['#0a0a0a', '#111111'], ground: '#ff6600', accent: '#dd4400', speed: 12, color: '#ff6600', stageLen: 3000, gap: 112, dark: true, bgImg: '/images/jump/bg-8.svg' },
+  { name: 'STAGE 9', bg: ['#000000', '#0a000a'], ground: '#ff00ff', accent: '#cc00cc', speed: 13.5, color: '#ff44ff', stageLen: 3400, gap: 102, dark: true, bgImg: '/images/jump/bg-9.svg' },
 ];
 
 function roundedRect(ctx, x, y, w, h, r) {
@@ -109,16 +116,23 @@ export function MiniGame({ onBack }) {
   const canvasRef = useRef(null);
   const rafRef = useRef(null);
   const chickImgRef = useRef(null);
+  const chickSlideImgRef = useRef(null);
+  const assetsRef = useRef({ imgs: new Map() });
   const lastUiStateRef = useRef(null);
   const answerQuizRef = useRef(null);
+  const coinSoundRef = useRef(null);
+  const smashSoundRef = useRef(null);
+  const errorSoundRef = useRef(null);
   const navigate = useNavigate();
   const gameRef = useRef({
     stageIdx: 0, state: 'idle', dist: 0, bgOffset: 0, lives: MAX_LIVES,
-    obstacles: [], sparkles: [], deathFlash: 0, stageComplete: false,
+    obstacles: [], coins: [], sparkles: [], deathFlash: 0, stageComplete: false,
     quizActive: false, currentQuiz: null, currentObs: null,
-    bird: { x: 80, y: GY, vy: 0, onGround: true, canDouble: true, dead: false, legPhase: 0 },
+    score: 0,
+    combo: { count: 0, mult: 1, lastAt: 0 },
+    bird: { x: 80, y: GY, vy: 0, onGround: true, canDouble: true, jumpsLeft: MAX_JUMPS, dead: false, legPhase: 0, sliding: false, slideTimer: 0 },
   });
-  const [uiState, setUiState] = useState({ stage: 'STAGE 1', prog: 0, lives: MAX_LIVES, color: '#5a9b5a' });
+  const [uiState, setUiState] = useState({ stage: 'STAGE 1', prog: 0, lives: MAX_LIVES, color: '#5a9b5a', score: 0, combo: 0, mult: 1 });
   const [quizState, setQuizState] = useState(emptyQuizState);
 
   useEffect(() => {
@@ -139,47 +153,102 @@ export function MiniGame({ onBack }) {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     const g = gameRef.current;
+    const coinAudio = new Audio();
+    coinAudio.src = '/audio/jumpcoin.mp3';
+    coinAudio.volume = 0.5;
+    coinAudio.load();
+    coinSoundRef.current = coinAudio;
 
-    canvas.style.width = '100%';
-    canvas.style.height = '100%';
-    canvas.style.display = 'block';
+    const smashAudio = new Audio();
+    smashAudio.src = '/audio/jumpsmash.mp3';
+    smashAudio.volume = 0.55;
+    smashAudio.load();
+    smashSoundRef.current = smashAudio;
 
-    let lastDw = -1;
-    let lastDh = -1;
-    function applyCanvasTransform(letterboxColor) {
+    const errorAudio = new Audio();
+    errorAudio.src = '/audio/jumperror.mp3';
+    errorAudio.volume = 0.55;
+    errorAudio.load();
+    errorSoundRef.current = errorAudio;
+
+    function playSfx(ref) {
+      const a = ref.current;
+      if (!a) return;
+      try {
+        a.currentTime = 0;
+        void a.play().catch(() => {});
+      } catch (_) {}
+    }
+
+    let lastW = -1;
+    let lastH = -1;
+    function applyCanvasTransform() {
       const dpr = window.devicePixelRatio || 1;
-      const dw = Math.max(1, canvas.clientWidth);
-      const dh = Math.max(1, canvas.clientHeight);
-      if (dw !== lastDw || dh !== lastDh) {
-        lastDw = dw;
-        lastDh = dh;
+      const dw = Math.max(1, window.innerWidth);
+      const dh = Math.max(1, window.innerHeight);
+      if (dw !== lastW || dh !== lastH) {
+        lastW = dw;
+        lastH = dh;
         canvas.width = Math.floor(dw * dpr);
         canvas.height = Math.floor(dh * dpr);
       }
-      const scale = Math.min(dw / W, dh / H);
+      // Fit to screen without distortion (no crop): uniform scale + letterbox.
+      // Add a little safety margin so it doesn't feel too zoomed on laptops.
+      const scale = Math.min(dw / W, dh / H) * 0.96;
       const drawW = W * scale;
       const drawH = H * scale;
-      const ox = (dw - drawW) / 2;
-      const oy = (dh - drawH) / 2;
+      const ox = Math.round(((dw - drawW) / 2) * dpr) / dpr;
+      const oy = Math.round(((dh - drawH) / 2) * dpr) / dpr;
+
+      // Paint the full viewport first (prevents any seam lines).
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.fillStyle = letterboxColor;
+      const bg = getStage();
+      const full = ctx.createLinearGradient(0, 0, 0, dh);
+      full.addColorStop(0, bg.bg[0]);
+      full.addColorStop(1, bg.dark ? bg.bg[0] : bg.bg[1]);
+      ctx.fillStyle = full;
       ctx.fillRect(0, 0, dw, dh);
-      ctx.imageSmoothingEnabled = true;
-      if (typeof ctx.imageSmoothingQuality === 'string') ctx.imageSmoothingQuality = 'high';
+
+      // Then draw the game in the centered fitted area.
       ctx.translate(ox, oy);
       ctx.scale(scale, scale);
+      ctx.imageSmoothingEnabled = true;
+      if (typeof ctx.imageSmoothingQuality === 'string') ctx.imageSmoothingQuality = 'high';
     }
 
     const chickImg = new Image();
     chickImg.src = '/images/gamechick.png';
     chickImgRef.current = chickImg;
 
+    const chickSlideImg = new Image();
+    chickSlideImg.src = '/images/chickslide.png';
+    chickSlideImgRef.current = chickSlideImg;
+
     function getStage() { return STAGES[Math.min(g.stageIdx, STAGES.length - 1)]; }
     function getQuizPool() { return STAGE_QUIZZES[Math.min(g.stageIdx, STAGE_QUIZZES.length - 1)]; }
 
+    function getImg(src) {
+      if (!src) return null;
+      const cache = assetsRef.current.imgs;
+      const cached = cache.get(src);
+      if (cached) return cached;
+      const img = new Image();
+      img.decoding = 'async';
+      img.src = src;
+      cache.set(src, img);
+      return img;
+    }
+
     function syncUi(nextState) {
       const prev = lastUiStateRef.current;
-      if (prev && prev.stage === nextState.stage && prev.prog === nextState.prog && prev.lives === nextState.lives && prev.color === nextState.color) return;
+      if (prev
+        && prev.stage === nextState.stage
+        && prev.prog === nextState.prog
+        && prev.lives === nextState.lives
+        && prev.color === nextState.color
+        && prev.score === nextState.score
+        && prev.combo === nextState.combo
+        && prev.mult === nextState.mult) return;
       lastUiStateRef.current = nextState;
       setUiState(nextState);
     }
@@ -193,33 +262,133 @@ export function MiniGame({ onBack }) {
       }
     }
 
-    function genObstacles() {
+    function genObstaclesAndCoins() {
       const s = getStage(); const pool = getQuizPool();
-      const obstacles = []; let ox = 420; let i = 0;
+      const obstacles = [];
+      const coins = [];
+      let ox = 420; let i = 0;
       while (ox < s.stageLen) {
         const quiz = pool[i % pool.length];
-        const h = 40 + Math.random() * 18;
-        obstacles.push({ ox, x: ox, y: GY + 36 - h, w: 46, h, quiz, passed: false });
-        ox += s.gap + Math.random() * 45; i++;
+        const roll = Math.random();
+        let pattern = 'single';
+        if (roll < 0.18) pattern = 'low-run';
+        else if (roll < 0.34) pattern = 'high';
+        else if (roll < 0.48) pattern = 'double';
+        else if (roll < 0.58) pattern = 'triple';
+        else if (roll < 0.68) pattern = 'flying';
+        else if (roll < 0.80) pattern = 'ceiling'; // forces slide
+
+        const mkObs = (localOx, idxInPattern) => {
+          let type = 'bug';
+          if (pattern === 'high') type = 'snake';
+          if (pattern === 'flying') type = 'bug';
+          if (pattern === 'low-run') type = 'snake';
+          if (pattern === 'ceiling') type = 'ceiling';
+          // Slightly smaller than the chick sprite (60x60)
+          const baseW = type === 'snake' ? 52 : 46;
+          const baseH = pattern === 'high' ? 56 : 44;
+          const w = (type === 'ceiling' ? 92 : baseW) + (idxInPattern > 0 ? -6 : 0);
+          const h = (type === 'ceiling' ? (24 + Math.random() * 10) : (baseH + Math.random() * 10));
+          // NOTE: ceiling obstacle bottom must stay above sliding hitbox top (GY + 20)
+          // so sliding can pass under but standing collides.
+          const y = type === 'ceiling'
+            ? (GY - 10 - h) // bottom = GY - 10 (< GY + 20)
+            : (pattern === 'flying' ? (GY - 30 - h) : (GY + 36 - h));
+          return { ox: localOx, x: localOx, y, w, h, quiz, passed: false, type, pattern };
+        };
+
+        if (pattern === 'double' || pattern === 'triple') {
+          const cnt = pattern === 'double' ? 2 : 3;
+          for (let k = 0; k < cnt; k++) obstacles.push(mkObs(ox + k * 78, k));
+          // coin trail encourages combo
+          for (let c = 0; c < cnt * 2; c++) {
+            coins.push({ ox: ox + 18 + c * 34, x: ox + 18 + c * 34, y: GY - 22 - (c % 2) * 12, r: 10, taken: false, kind: 'coin' });
+          }
+          ox += s.gap + 120 + Math.random() * 30;
+        } else if (pattern === 'low-run') {
+          obstacles.push(mkObs(ox, 0));
+          obstacles.push(mkObs(ox + 92, 1));
+          coins.push({ ox: ox + 40, x: ox + 40, y: GY - 18, r: 10, taken: false, kind: 'coin' });
+          coins.push({ ox: ox + 74, x: ox + 74, y: GY - 48, r: 10, taken: false, kind: 'coin' });
+          ox += s.gap + 80 + Math.random() * 35;
+        } else if (pattern === 'flying') {
+          obstacles.push(mkObs(ox, 0));
+          // ground coins under flying obstacle
+          for (let c = 0; c < 4; c++) coins.push({ ox: ox + 12 + c * 34, x: ox + 12 + c * 34, y: GY - 12, r: 10, taken: false, kind: 'coin' });
+          ox += s.gap + 40 + Math.random() * 35;
+        } else if (pattern === 'ceiling') {
+          obstacles.push(mkObs(ox, 0));
+          // coins encourage sliding-through reward line (still reachable)
+          for (let c = 0; c < 4; c++) coins.push({ ox: ox + 18 + c * 30, x: ox + 18 + c * 30, y: GY - 40 - (c % 2) * 10, r: 10, taken: false, kind: 'coin' });
+          ox += s.gap + 70 + Math.random() * 45;
+        } else {
+          obstacles.push(mkObs(ox, 0));
+          if (Math.random() < 0.7) coins.push({ ox: ox + 18, x: ox + 18, y: GY - (18 + Math.random() * 54), r: 10, taken: false, kind: 'coin' });
+          ox += s.gap + Math.random() * 45;
+        }
+        i++;
       }
       g.obstacles = obstacles;
+      // Extra coin placements across the stage (not only above obstacles).
+      // Keep within realistic jump height so coins are reachable.
+      const minY = Math.max(34, GY - 140);
+      const maxY = Math.max(minY, GY - 18);
+      let cx = 260;
+      while (cx < s.stageLen) {
+        const arc = Math.random() < 0.55;
+        const baseY = minY + Math.random() * (maxY - minY);
+        const count = arc ? (3 + Math.floor(Math.random() * 4)) : (1 + Math.floor(Math.random() * 3));
+        const step = 34;
+        for (let k = 0; k < count; k++) {
+          const x = cx + k * step;
+          const y = arc
+            ? (baseY - Math.sin((k / Math.max(1, count - 1)) * Math.PI) * 22)
+            : (baseY + (k % 2 === 0 ? 0 : -14));
+          // avoid spawning too close inside obstacles
+          let nearObs = false;
+          for (const o of obstacles) {
+            if (Math.abs(o.ox - x) < 42 && y > o.y - 16 && y < (o.y + o.h + 16)) { nearObs = true; break; }
+          }
+          if (!nearObs) coins.push({ ox: x, x, y, r: 10, taken: false, kind: 'coin' });
+        }
+        cx += 160 + Math.random() * 120;
+      }
+      g.coins = coins;
     }
 
     function resetGame(nextStage = false) {
       if (nextStage && g.stageIdx < STAGES.length - 1) { g.stageIdx++; }
-      else if (!nextStage || g.stageIdx >= STAGES.length - 1) { g.stageIdx = 0; g.lives = MAX_LIVES; }
+      else if (!nextStage || g.stageIdx >= STAGES.length - 1) { g.stageIdx = 0; g.lives = MAX_LIVES; g.score = 0; g.combo = { count: 0, mult: 1, lastAt: 0 }; }
       g.state = 'running'; g.dist = 0; g.bgOffset = 0; g.deathFlash = 0;
       g.stageComplete = false; g.quizActive = false; g.currentQuiz = null; g.currentObs = null; g.sparkles = [];
-      Object.assign(g.bird, { y: GY, vy: 0, onGround: true, canDouble: true, dead: false, legPhase: 0 });
-      genObstacles();
+      Object.assign(g.bird, { y: GY, vy: 0, onGround: true, canDouble: true, jumpsLeft: MAX_JUMPS, dead: false, legPhase: 0, sliding: false, slideTimer: 0 });
+      genObstaclesAndCoins();
       setQuizState(emptyQuizState());
-      syncUi({ stage: getStage().name, prog: 0, lives: g.lives, color: getStage().color });
+      syncUi({ stage: getStage().name, prog: 0, lives: g.lives, color: getStage().color, score: g.score, combo: g.combo.count, mult: g.combo.mult });
     }
 
     function collides(o) {
       if (o.passed) return false;
-      const bx = g.bird.x + 12, by = g.bird.y + 6, bw = 20, bh = 38;
+      const { bird } = g;
+      const bx = bird.x + 12;
+      const bw = 20;
+      if (bird.sliding) {
+        const by = GY + 20;
+        const bh = 20;
+        return bx < o.x + o.w && bx + bw > o.x && by < o.y + o.h && by + bh > o.y;
+      }
+      const by = bird.y + 6;
+      const bh = 38;
       return bx < o.x + o.w && bx + bw > o.x && by < o.y + o.h && by + bh > o.y;
+    }
+
+    /** AABB for coin pickup — taller than obstacle `collides` so ground-level coins register without jumping. */
+    function birdCoinAabb() {
+      const { bird } = g;
+      if (bird.sliding) {
+        return { bx: bird.x + 6, by: GY - 20, bw: 36, bh: 52 };
+      }
+      return { bx: bird.x + 6, by: bird.y - 32, bw: 32, bh: 74 };
     }
 
     function showQuiz(quiz, obstacle) {
@@ -230,7 +399,15 @@ export function MiniGame({ onBack }) {
     function finishQuiz() {
       g.quizActive = false; g.currentQuiz = null; g.currentObs = null;
       setQuizState(emptyQuizState());
-      syncUi({ stage: getStage().name, prog: Math.min(Math.round((g.dist / getStage().stageLen) * 100), 100), lives: g.lives, color: getStage().color });
+      syncUi({
+        stage: getStage().name,
+        prog: Math.min(Math.round((g.dist / getStage().stageLen) * 100), 100),
+        lives: g.lives,
+        color: getStage().color,
+        score: g.score,
+        combo: g.combo.count,
+        mult: g.combo.mult,
+      });
     }
 
     answerQuizRef.current = (answer) => {
@@ -238,17 +415,36 @@ export function MiniGame({ onBack }) {
       const correct = answer === g.currentQuiz.ans;
       setQuizState((prev) => ({ ...prev, locked: true }));
       if (correct) {
+        playSfx(smashSoundRef);
         g.currentObs.passed = true;
         spawnSparkles(g.bird.x + 18, g.bird.y);
-        syncUi({ stage: getStage().name, prog: Math.min(Math.round((g.dist / getStage().stageLen) * 100), 100), lives: g.lives, color: getStage().color });
+        syncUi({
+          stage: getStage().name,
+          prog: Math.min(Math.round((g.dist / getStage().stageLen) * 100), 100),
+          lives: g.lives,
+          color: getStage().color,
+          score: g.score,
+          combo: g.combo.count,
+          mult: g.combo.mult,
+        });
         setQuizState((prev) => ({ ...prev, feedback: '정답! 장애물을 통과합니다.', feedbackColor: '#2e7d32' }));
         window.setTimeout(finishQuiz, 650);
         return;
       }
+      playSfx(errorSoundRef);
       g.lives = Math.max(0, g.lives - 1);
       g.deathFlash = 0.8;
+      g.combo = { count: 0, mult: 1, lastAt: 0 };
       g.currentObs.passed = true;
-      syncUi({ stage: getStage().name, prog: Math.min(Math.round((g.dist / getStage().stageLen) * 100), 100), lives: g.lives, color: getStage().color });
+      syncUi({
+        stage: getStage().name,
+        prog: Math.min(Math.round((g.dist / getStage().stageLen) * 100), 100),
+        lives: g.lives,
+        color: getStage().color,
+        score: g.score,
+        combo: g.combo.count,
+        mult: g.combo.mult,
+      });
       setQuizState((prev) => ({ ...prev, feedback: `오답! 정답: ${g.currentQuiz.ans} / 목숨 -1`, feedbackColor: '#c62828' }));
       window.setTimeout(() => {
         if (g.lives <= 0) {
@@ -260,44 +456,51 @@ export function MiniGame({ onBack }) {
     };
 
     function drawBg(s) {
+      // Single gradient across whole canvas to avoid any seam lines.
+      const grad = ctx.createLinearGradient(0, 0, 0, H);
+      grad.addColorStop(0, s.bg[0]);
+      grad.addColorStop(Math.min(0.82, (GY + 10) / H), s.bg[1]);
+      grad.addColorStop(Math.min(0.9, (GY + 40) / H), s.ground);
+      grad.addColorStop(1, s.ground);
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, W, H);
+
+      // Subtle moving clouds/stars on top (no hard horizon line).
       if (s.dark) {
-        ctx.fillStyle = s.bg[0]; ctx.fillRect(0, 0, W, H);
         for (let i = 0; i < 32; i++) {
-          const sx = ((i * 73 + g.bgOffset * 0.12) % W + W) % W;
-          const sy = (i * 37) % GY;
+          const px = ((i * 73 + g.bgOffset * 0.12) % W + W) % W;
+          const py = (i * 37) % (GY - 10);
           const br = Math.sin(Date.now() * 0.003 + i) * 0.5 + 0.5;
-          ctx.fillStyle = `rgba(255,255,255,${br * 0.45})`;
-          ctx.beginPath(); ctx.arc(sx, sy, 1, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = `rgba(255,255,255,${br * 0.4})`;
+          ctx.beginPath(); ctx.arc(px, py, 1, 0, Math.PI * 2); ctx.fill();
         }
       } else {
-        const grad = ctx.createLinearGradient(0, 0, 0, GY);
-        grad.addColorStop(0, s.bg[0]); grad.addColorStop(1, s.bg[1]);
-        ctx.fillStyle = grad; ctx.fillRect(0, 0, W, GY);
         for (let i = 0; i < 4; i++) {
-          const clx = ((i * 180 + g.bgOffset * 0.3) % W + W) % W;
-          const cly = 28 + i * 15;
-          ctx.fillStyle = 'rgba(255,255,255,0.5)';
-          ctx.beginPath(); ctx.ellipse(clx, cly, 35, 13, 0, 0, Math.PI * 2); ctx.fill();
-          ctx.beginPath(); ctx.ellipse(clx - 20, cly + 5, 20, 10, 0, 0, Math.PI * 2); ctx.fill();
-          ctx.beginPath(); ctx.ellipse(clx + 22, cly + 5, 22, 10, 0, 0, Math.PI * 2); ctx.fill();
+          const clx = ((i * 220 + g.bgOffset * 0.3) % W + W) % W;
+          const cly = 28 + i * 14;
+          ctx.fillStyle = 'rgba(255,255,255,0.45)';
+          ctx.beginPath(); ctx.ellipse(clx, cly, 45, 16, 0, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.ellipse(clx - 26, cly + 6, 24, 12, 0, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.ellipse(clx + 26, cly + 6, 26, 12, 0, 0, Math.PI * 2); ctx.fill();
         }
-        ctx.fillStyle = s.bg[1];
-        ctx.fillRect(0, GY, W, 36);
       }
-      ctx.fillStyle = s.ground; ctx.fillRect(0, GY + 36, W, H - GY - 36);
-      ctx.strokeStyle = s.accent; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(0, GY + 36); ctx.lineTo(W, GY + 36); ctx.stroke();
     }
 
     function drawBird() {
       const { bird } = g; const bx = bird.x + 18; const by = bird.y;
-      const chickImgEl = chickImgRef.current;
+      const chickImgEl = bird.sliding ? chickSlideImgRef.current : chickImgRef.current;
       if (chickImgEl && chickImgEl.complete && chickImgEl.naturalWidth) {
         ctx.imageSmoothingEnabled = true;
         if (typeof ctx.imageSmoothingQuality === 'string') ctx.imageSmoothingQuality = 'high';
-        const cw = 60;
-        const ch = 60;
-        ctx.drawImage(chickImgEl, bx - cw / 2, by - ch / 2 + 14, cw, ch);
+        const cw = bird.sliding ? 68 : 60;
+        const ch = bird.sliding ? 68 : 60;
+        if (bird.sliding) {
+          // Use dedicated slide sprite; keep it low to the ground.
+          const targetY = GY + 18;
+          const slideW = 78;
+          const slideH = 78;
+          ctx.drawImage(chickImgEl, bx - slideW / 2, targetY - slideH / 2 + 18, slideW, slideH);
+        } else ctx.drawImage(chickImgEl, bx - cw / 2, by - ch / 2 + 14, cw, ch);
         return;
       }
       if (bird.onGround) {
@@ -331,21 +534,46 @@ export function MiniGame({ onBack }) {
 
     function drawObstacle(o, s) {
       if (o.passed) return;
+      if (o.type === 'ceiling') {
+        // Ceiling obstacle: meant to be avoided by sliding under it.
+        ctx.fillStyle = s.dark ? 'rgba(255,255,255,0.18)' : 'rgba(40,40,40,0.22)';
+        ctx.beginPath(); roundedRect(ctx, o.x, o.y, o.w, o.h, 10); ctx.fill();
+        ctx.strokeStyle = s.dark ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.75)';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); roundedRect(ctx, o.x, o.y, o.w, o.h, 10); ctx.stroke();
+        ctx.fillStyle = s.dark ? '#fff' : '#222';
+        ctx.font = 'bold 14px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('⬇ 슬라이드', o.x + o.w / 2, o.y + o.h / 2 + 5);
+        return;
+      }
+      const src = o.type === 'snake' ? '/images/jump/obs-snake.svg' : '/images/jump/obs-bug.svg';
+      const img = getImg(src);
+      if (img && img.complete && img.naturalWidth) {
+        ctx.imageSmoothingEnabled = true;
+        ctx.drawImage(img, o.x - 6, o.y - 10, o.w + 12, o.h + 16);
+        return;
+      }
       const col = s.dark ? s.color : '#4466cc';
       ctx.fillStyle = s.dark ? `${col}99` : `${col}dd`;
-      ctx.beginPath(); roundedRect(ctx, o.x, o.y, o.w, o.h, 7); ctx.fill();
+      ctx.beginPath(); roundedRect(ctx, o.x, o.y, o.w, o.h, 10); ctx.fill();
       ctx.strokeStyle = s.dark ? s.color : 'rgba(255,255,255,0.85)'; ctx.lineWidth = 2;
-      ctx.beginPath(); roundedRect(ctx, o.x, o.y, o.w, o.h, 7); ctx.stroke();
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 12px monospace'; ctx.textAlign = 'center';
-      ctx.fillText('🪨', o.x + o.w / 2, o.y + o.h / 2 + 6);
+      ctx.beginPath(); roundedRect(ctx, o.x, o.y, o.w, o.h, 10); ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 14px monospace'; ctx.textAlign = 'center';
+      ctx.fillText(o.type === 'snake' ? '🐍' : '🐛', o.x + o.w / 2, o.y + o.h / 2 + 7);
     }
 
-    function drawProgressBar(s) {
-      const pct = Math.min(g.dist / s.stageLen, 1);
-      ctx.fillStyle = 'rgba(0,0,0,0.12)'; ctx.beginPath(); roundedRect(ctx, W - 120, 10, 110, 8, 4); ctx.fill();
-      ctx.fillStyle = s.color; ctx.beginPath(); roundedRect(ctx, W - 120, 10, 110 * pct, 8, 4); ctx.fill();
-      ctx.fillStyle = s.dark ? '#fff' : '#333'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'right';
-      ctx.fillText(s.name, W - 10, 9);
+    function drawCoin(c) {
+      if (c.taken) return;
+      const img = getImg('/images/jump/item-coin.svg');
+      if (img && img.complete && img.naturalWidth) {
+        ctx.drawImage(img, c.x - 14, c.y - 14, 28, 28);
+        return;
+      }
+      ctx.fillStyle = '#ffcc33';
+      ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(c.x, c.y, c.r - 1, 0, Math.PI * 2); ctx.stroke();
     }
 
     function drawOverlay(s) {
@@ -358,7 +586,7 @@ export function MiniGame({ onBack }) {
         ctx.font = '13px sans-serif'; ctx.fillStyle = sc;
         ctx.fillText('장애물에 부딪히면 자바 퀴즈! 정답이면 통과, 오답이면 목숨 -1', W / 2, H / 2);
         ctx.fillStyle = s.color; ctx.font = 'bold 11px sans-serif';
-        ctx.fillText('스페이스바 / 클릭으로 시작', W / 2, H / 2 + 22);
+        ctx.fillText('스페이스바=점프 / S키=슬라이드', W / 2, H / 2 + 22);
       }
       if (g.state === 'dead') {
         ctx.fillStyle = 'rgba(0,0,0,0.16)'; ctx.fillRect(0, 0, W, H);
@@ -383,30 +611,65 @@ export function MiniGame({ onBack }) {
 
     function loop() {
       const s = getStage();
-      applyCanvasTransform(s.dark ? s.bg[0] : s.bg[1]);
+      applyCanvasTransform();
       ctx.clearRect(0, 0, W, H);
       if (g.state === 'running' && !g.stageComplete && !g.quizActive) {
-        g.dist += s.speed; g.bgOffset += s.speed;
+        const progress = Math.min(g.dist / s.stageLen, 1);
+        const speed = s.speed * (1 + progress * 0.28);
+        g.dist += speed; g.bgOffset += speed;
         g.obstacles.forEach((o) => { o.x = o.ox - g.dist; });
+        g.coins.forEach((c) => { c.x = c.ox - g.dist; });
         const { bird } = g;
+        if (bird.sliding) {
+          bird.slideTimer -= 1;
+          if (bird.slideTimer <= 0) { bird.sliding = false; bird.slideTimer = 0; }
+        }
         bird.vy += GRAVITY; bird.y += bird.vy;
-        if (bird.y >= GY) { bird.y = GY; bird.vy = 0; bird.onGround = true; bird.canDouble = true; }
+        if (bird.y >= GY) { bird.y = GY; bird.vy = 0; bird.onGround = true; bird.canDouble = true; bird.jumpsLeft = MAX_JUMPS; }
         if (bird.onGround) bird.legPhase += 0.35;
         for (const o of g.obstacles) {
           if (!o.passed && o.x > -60 && o.x < 170 && collides(o)) { showQuiz(o.quiz, o); break; }
         }
+        // combo decay
+        if (g.combo.count > 0 && Date.now() - g.combo.lastAt > COMBO_WINDOW_MS) g.combo = { count: 0, mult: 1, lastAt: 0 };
+        // coin pickup (generous vs. obstacle hitbox so walking/jumping both collect)
+        const { bx, by, bw, bh } = birdCoinAabb();
+        for (const c of g.coins) {
+          if (c.taken) continue;
+          if (c.x < -40 || c.x > W + 40) continue;
+          const cx = c.x, cy = c.y;
+          const closestX = Math.max(bx, Math.min(cx, bx + bw));
+          const closestY = Math.max(by, Math.min(cy, by + bh));
+          const dx = cx - closestX;
+          const dy = cy - closestY;
+          if (dx * dx + dy * dy <= (c.r + 2) * (c.r + 2)) {
+            c.taken = true;
+            if (coinSoundRef.current) {
+              coinSoundRef.current.currentTime = 0;
+              coinSoundRef.current.play().catch(() => {});
+            }
+            const now = Date.now();
+            const chained = g.combo.lastAt && (now - g.combo.lastAt) <= COMBO_WINDOW_MS;
+            const nextCount = chained ? (g.combo.count + 1) : 1;
+            const nextMult = Math.min(MAX_COMBO_MULT, 1 + Math.floor(nextCount / 6) * 0.5);
+            g.combo = { count: nextCount, mult: nextMult, lastAt: now };
+            g.score += Math.round(COIN_SCORE * nextMult);
+            spawnSparkles(c.x, c.y);
+          }
+        }
         if (g.dist >= s.stageLen) { g.stageComplete = true; spawnSparkles(W / 2, H / 2); spawnSparkles(g.bird.x + 18, g.bird.y); }
         const pct = Math.min(Math.round((g.dist / s.stageLen) * 100), 100);
-        syncUi({ stage: s.name, prog: pct, lives: g.lives, color: s.color });
+        syncUi({ stage: s.name, prog: pct, lives: g.lives, color: s.color, score: g.score, combo: g.combo.count, mult: g.combo.mult });
       }
       drawBg(s);
       g.obstacles.forEach((o) => { if (o.x > -80 && o.x < W + 20) drawObstacle(o, s); });
+      g.coins.forEach((c) => { if (c.x > -80 && c.x < W + 20) drawCoin(c); });
       g.sparkles = g.sparkles.filter((sp) => sp.life > 0);
       g.sparkles.forEach((sp) => { sp.x += sp.vx; sp.y += sp.vy; sp.vy += 0.12; sp.life -= 0.04; });
       ctx.save();
       g.sparkles.forEach((sp) => { ctx.globalAlpha = sp.life; ctx.fillStyle = sp.col; ctx.beginPath(); ctx.arc(sp.x, sp.y, 3, 0, Math.PI * 2); ctx.fill(); });
       ctx.globalAlpha = 1; ctx.restore();
-      drawBird(); drawProgressBar(s); drawOverlay(s);
+      drawBird(); drawOverlay(s);
       rafRef.current = requestAnimationFrame(loop);
     }
 
@@ -415,18 +678,39 @@ export function MiniGame({ onBack }) {
       if (g.state === 'idle' || g.state === 'dead') { resetGame(false); return; }
       if (g.stageComplete) { resetGame(g.stageIdx < STAGES.length - 1); return; }
       const { bird } = g;
-      if (bird.onGround) { bird.vy = JUMP_V; bird.onGround = false; bird.canDouble = true; }
-      else if (bird.canDouble) { bird.vy = DBL_V; bird.canDouble = false; }
+      if (bird.sliding) { bird.sliding = false; bird.slideTimer = 0; }
+      if (bird.jumpsLeft <= 0) return;
+      const isFirst = bird.onGround;
+      bird.vy = isFirst ? JUMP_V : DBL_V;
+      bird.onGround = false;
+      bird.jumpsLeft -= 1;
+      if (bird.jumpsLeft <= 0) bird.canDouble = false;
     }
 
-    const onKey = (e) => { if (e.code === 'Space') { e.preventDefault(); action(); } };
+    function slide() {
+      if (g.quizActive) return;
+      if (g.state !== 'running') return;
+      const { bird } = g;
+      if (!bird.onGround) return;
+      if (bird.sliding) return;
+      bird.sliding = true;
+      bird.slideTimer = SLIDE_FRAMES;
+    }
+
+    const onKey = (e) => {
+      if (e.code === 'Space') { e.preventDefault(); action(); return; }
+      if (e.code === 'ArrowDown' || e.code === 'KeyS') { e.preventDefault(); slide(); }
+    };
     const onClick = () => action();
     const onTouch = (e) => { e.preventDefault(); action(); };
+
+    const onResize = () => applyCanvasTransform();
 
     document.addEventListener('keydown', onKey);
     canvas.addEventListener('click', onClick);
     canvas.addEventListener('touchstart', onTouch, { passive: false });
-    genObstacles();
+    window.addEventListener('resize', onResize);
+    genObstaclesAndCoins();
     rafRef.current = requestAnimationFrame(loop);
 
     return () => {
@@ -434,6 +718,10 @@ export function MiniGame({ onBack }) {
       document.removeEventListener('keydown', onKey);
       canvas.removeEventListener('click', onClick);
       canvas.removeEventListener('touchstart', onTouch);
+      window.removeEventListener('resize', onResize);
+      if (coinSoundRef.current) coinSoundRef.current.pause();
+      if (smashSoundRef.current) smashSoundRef.current.pause();
+      if (errorSoundRef.current) errorSoundRef.current.pause();
     };
   }, []);
 
@@ -441,13 +729,7 @@ export function MiniGame({ onBack }) {
   const lifeColor = uiState.lives === 1 ? '#e53935' : uiState.lives === 2 ? '#f57c00' : '#2e7d32';
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0, left: 0, right: 0, bottom: 0,
-      zIndex: 500,
-      overflow: 'hidden',
-      fontFamily: 'Noto Sans KR, sans-serif',
-    }}>
+    <div className="jump-root">
       <button
         type="button"
         onClick={() => (onBack ? onBack() : navigate('/minigame'))}
@@ -469,17 +751,8 @@ export function MiniGame({ onBack }) {
       </button>
       <canvas
         ref={canvasRef}
-        width={W}
-        height={H}
-        style={{
-          position: 'absolute',
-          inset: 0,
-          width: '100%',
-          height: '100%',
-          display: 'block',
-          cursor: 'pointer',
-          touchAction: 'none',
-        }}
+        className="jump-canvas"
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
       />
       <div style={{
         position: 'absolute',
@@ -500,8 +773,16 @@ export function MiniGame({ onBack }) {
           <span style={{ fontSize: 12, color: '#fff', fontWeight: 800 }}>
             진행: <b>{uiState.prog}%</b>
           </span>
+          <span style={{ fontSize: 12, color: '#fff', fontWeight: 900 }}>
+            점수: <b>{uiState.score}</b>
+          </span>
+          {uiState.combo > 0 && (
+            <span style={{ fontSize: 12, color: '#fff', fontWeight: 900 }}>
+              콤보: <b>{uiState.combo}</b> (<b>x{uiState.mult}</b>)
+            </span>
+          )}
         </div>
-        <span style={{ fontSize: 12, color: '#fff', fontWeight: 800 }}>
+        <span style={{ fontSize: 12, color: '#fff', fontWeight: 800, minWidth: 170, textAlign: 'right' }}>
           목숨: <b style={{ color: lifeColor }}>{lifeText}</b>
         </span>
       </div>

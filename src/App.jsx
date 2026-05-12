@@ -25,6 +25,8 @@ function App() {
         onOpenSettings={() => setShowSettings(true)} 
         onOpenAuth={() => setShowAuth(true)} 
         t={t}
+        params={params}
+        setParams={setParams}
       />
       
       {showAuth && <AuthModal onClose={() => setShowAuth(false)} t={t} />}
@@ -32,12 +34,12 @@ function App() {
 
       <Routes>
         <Route path="/"         element={<Home t={t} />} />
-        <Route path="/quiz"     element={<Quiz t={t} />} />
+        <Route path="/quiz"     element={<Quiz t={t} params={params} />} />
         <Route path="/note"     element={<Note t={t} />} />
         <Route path="/pattern"  element={<Pattern t={t} />} />
         <Route path="/result"   element={<Result t={t} />} />
         <Route path="/minigame" element={<MiniGame />} />
-        <Route path="/play" element={<Quiz t={t} />} />
+        <Route path="/play" element={<Quiz t={t} params={params} />} />
       </Routes>
     </BrowserRouter>
   );
