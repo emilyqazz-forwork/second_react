@@ -151,8 +151,9 @@ function computeCctvChecks({
   lastMcqAt,
   lastActivityAt,
 }) {
+  // "코드 작성 중": 코딩 문제는 최근 30초 내 에디터 수정 기준
   const itemCodeTyping = isCoding
-    ? editorTyping
+    ? lastCodeEditAt != null && now - lastCodeEditAt < 30000
     : lastMcqAt != null && now - lastMcqAt < 30000;
   const itemTabOk = !docHidden;
   const itemSteadyTyping = isCoding
@@ -329,14 +330,39 @@ function getOfflineMcqChipAnswer(question, problem) {
   }
 }
 
+function readStoredPersona(fallback) {
+  try {
+    const raw = JSON.parse(localStorage.getItem('chickodePrefs') || '{}');
+    return raw.persona ?? fallback ?? 'default';
+  } catch {
+    return fallback ?? 'default';
+  }
+}
+
 export function Quiz({ t, params }) {
   const location = useLocation();
   const navigate = useNavigate();
   const settings = location.state || { count: 10, ratio: 50, chapter: 1, difficulty: '중' };
 
-  const persona = params?.persona ?? 'default';
+  const [persona, setPersona] = useState(() => readStoredPersona(params?.persona));
   const tutorPersona = getTutorPersona(persona);
-  
+
+  useEffect(() => {
+    setPersona(readStoredPersona(params?.persona));
+  }, [params?.persona]);
+
+  useEffect(() => {
+    const sync = () => setPersona(readStoredPersona(params?.persona));
+    const id = window.setInterval(sync, 1200);
+    window.addEventListener('focus', sync);
+    window.addEventListener('storage', sync);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener('focus', sync);
+      window.removeEventListener('storage', sync);
+    };
+  }, [params?.persona]);
+
   const [quizList, setQuizList] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [correctCount, setCorrectCount] = useState(0);
@@ -345,14 +371,13 @@ export function Quiz({ t, params }) {
   const [codeValue, setCodeValue] = useState('');
   const [termOutput, setTermOutput] = useState([
     { type: 'system', text: '> Chickode IDE Console v1.0.0' },
-    { type: 'system', text: '> Ready for compilation...' }
+    { type: 'system', text: '> Ready for compilation...' },
   ]);
   const [chatHistory, setChatHistory] = useState([]);
-  const [chatInput, setChatInput] = useState("");
+  const [chatInput, setChatInput] = useState('');
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [reactionMessage, setReactionMessage] = useState(() => {
-    const raw = JSON.parse(localStorage.getItem('chickodePrefs') || '{}');
-    const p = raw.persona ?? 'default';
+    const p = readStoredPersona('default');
     const table = CCTV_MSG_BY_PERSONA[p] || CCTV_MSG_BY_PERSONA.default;
     return pickRandom(table.high || CCTV_MSG_HIGH);
   });
@@ -367,12 +392,8 @@ export function Quiz({ t, params }) {
   const lastActivityRef = useRef(Date.now());
   const lastCodeEditRef = useRef(null);
   const lastMcqRef = useRef(null);
-
-  const isEditorTypingRef = useRef(false);
   const editorTypingTimeoutRef = useRef(null);
   const cctvResultClearTimeoutRef = useRef(null);
-
-  isEditorTypingRef.current = isEditorTyping;
 
   const bumpActivity = useCallback(() => {
     lastActivityRef.current = Date.now();
@@ -380,20 +401,25 @@ export function Quiz({ t, params }) {
 
   useEffect(() => {
     if (settings.singleProblemId) {
-      const targetProblem = javaProblems.find(p => p.id === settings.singleProblemId || p.title === settings.singleProblemId);
-      if (targetProblem) { setQuizList([targetProblem]); return; }
+      const targetProblem = javaProblems.find(
+        (p) => p.id === settings.singleProblemId || p.title === settings.singleProblemId
+      );
+      if (targetProblem) {
+        setQuizList([targetProblem]);
+        return;
+      }
     }
     const { count, ratio, chapter, difficulty } = settings;
-    let pool = javaProblems.filter(p => (p.chapter === chapter || chapter === 0) && p.difficulty === difficulty);
-    if (pool.length === 0) pool = javaProblems.filter(p => p.chapter === chapter || chapter === 0);
+    let pool = javaProblems.filter((p) => (p.chapter === chapter || chapter === 0) && p.difficulty === difficulty);
+    if (pool.length === 0) pool = javaProblems.filter((p) => p.chapter === chapter || chapter === 0);
     if (pool.length === 0) pool = javaProblems;
     const objCount = Math.round(count * (ratio / 100));
     const subCount = count - objCount;
-    const objPool = pool.filter(p => p.type === 'ox' || p.type === 'multiple').sort(() => 0.5 - Math.random());
-    const subPool = pool.filter(p => p.type === 'coding').sort(() => 0.5 - Math.random());
-    let list = [];
-    if (objPool.length > 0) for(let i=0; i<objCount; i++) list.push(objPool[i % objPool.length]);
-    if (subPool.length > 0) for(let i=0; i<subCount; i++) list.push(subPool[i % subPool.length]);
+    const objPool = pool.filter((p) => p.type === 'ox' || p.type === 'multiple').sort(() => 0.5 - Math.random());
+    const subPool = pool.filter((p) => p.type === 'coding').sort(() => 0.5 - Math.random());
+    const list = [];
+    if (objPool.length > 0) for (let i = 0; i < objCount; i++) list.push(objPool[i % objPool.length]);
+    if (subPool.length > 0) for (let i = 0; i < subCount; i++) list.push(subPool[i % subPool.length]);
     setQuizList(list.sort(() => 0.5 - Math.random()));
   }, []);
 
@@ -405,7 +431,7 @@ export function Quiz({ t, params }) {
     setCodeValue(currentProblem.template || '');
     setTermOutput([
       { type: 'system', text: '> Chickode IDE Console v1.0.0' },
-      { type: 'system', text: '> Ready for compilation...' }
+      { type: 'system', text: '> Ready for compilation...' },
     ]);
     setResultStatus(t('quiz_result_wait'));
     setResultColor('#d4d4d4');
@@ -419,10 +445,7 @@ export function Quiz({ t, params }) {
       clearTimeout(cctvResultClearTimeoutRef.current);
       cctvResultClearTimeoutRef.current = null;
     }
-    setChatHistory((prev) => [
-      ...prev,
-      { role: 'bot', text: tutorOpeningMessage(currentProblem, persona) },
-    ]);
+    setChatHistory((prev) => [...prev, { role: 'bot', text: tutorOpeningMessage(currentProblem, persona) }]);
   }, [currentIndex, quizList]);
 
   useEffect(() => {
@@ -504,12 +527,16 @@ export function Quiz({ t, params }) {
     }
   }, [currentIndex, isChatOpen, quizList.length]);
 
-  useEffect(() => () => {
-    if (editorTypingTimeoutRef.current) clearTimeout(editorTypingTimeoutRef.current);
-    if (cctvResultClearTimeoutRef.current) clearTimeout(cctvResultClearTimeoutRef.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (editorTypingTimeoutRef.current) clearTimeout(editorTypingTimeoutRef.current);
+      if (cctvResultClearTimeoutRef.current) clearTimeout(cctvResultClearTimeoutRef.current);
+    },
+    []
+  );
 
-  const addTermLog = (msg, type='system') => setTermOutput(prev => [...prev, { type, text: `> ${msg}` }]);
+  const addTermLog = (msg, type = 'system') =>
+    setTermOutput((prev) => [...prev, { type, text: `> ${msg}` }]);
 
   const handleSendChat = async (message = null, chipKeyword = null) => {
     const text =
@@ -517,7 +544,7 @@ export function Quiz({ t, params }) {
         ? String(message).trim()
         : chatInput.trim();
     if (!text) return;
-    setChatInput("");
+    setChatInput('');
     const currentProblem = quizList[currentIndex];
     const thinkingText =
       persona === 'racer'
@@ -530,24 +557,28 @@ export function Quiz({ t, params }) {
     setChatHistory((prev) => [...prev, { role: 'user', text }, { role: 'bot', text: thinkingText, thinking: true }]);
     try {
       const res = await fetch(`${API_URL}/chat`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_question: text, user_code: codeValue, problem_context: currentProblem?.title || "" })
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_question: text,
+          user_code: codeValue,
+          problem_context: currentProblem?.title || '',
+        }),
       });
       const data = await res.json();
-      setChatHistory(prev => [...prev.filter(m => !m.thinking), { role: 'bot', text: data.answer }]);
+      setChatHistory((prev) => [...prev.filter((m) => !m.thinking), { role: 'bot', text: data.answer }]);
     } catch {
       const kws = currentProblem?.keywords || [];
-      const isMcq = currentProblem.type === 'multiple' || currentProblem.type === 'ox';
       const chipKw =
         chipKeyword != null && String(chipKeyword).trim() !== '' ? String(chipKeyword).trim() : '';
       const fromChipMeta =
-        chipKw &&
-        kws.some((k) => k === chipKw || normalizeKeywordKey(k) === normalizeKeywordKey(chipKw));
+        chipKw && kws.some((k) => k === chipKw || normalizeKeywordKey(k) === normalizeKeywordKey(chipKw));
       const resolvedKw =
         (fromChipMeta ? chipKw : null) ||
         findKeywordMatchingGuideQuestion(text, kws) ||
         (kws.includes(text) ? text : null);
       const keywordForLine = resolvedKw || kws[0] || '핵심 개념';
+
       if (persona === 'racer') {
         setChatHistory((prev) => [
           ...prev.filter((m) => !m.thinking),
@@ -571,12 +602,13 @@ export function Quiz({ t, params }) {
       }
 
       let mock;
-      if (isMcq && MCQ_GUIDE_CHIP_QUESTIONS.includes(text)) {
-        mock = getOfflineMcqChipAnswer(text, currentProblem);
-      } else if (resolvedKw) {
+      if (resolvedKw) {
         mock = getOfflineKeywordAnswer(resolvedKw, currentProblem);
       } else if (kws.length) {
-        mock = `지금 문제 「${currentProblem?.title || ''}」는 키워드 ${kws.slice(0, 3).map((k) => `「${k}」`).join(', ')}와 깊게 연결돼 있어. "${text}"에 대해 생각할 때, 이 키워드들이 문제 설명·요구사항과 어떻게 맞닿는지 순서대로 적어 보면 정리가 될 거야. (오프라인 모드 삐약)`;
+        mock = `지금 문제 「${currentProblem?.title || ''}」는 키워드 ${kws
+          .slice(0, 3)
+          .map((k) => `「${k}」`)
+          .join(', ')}와 깊게 연결돼 있어. "${text}"에 대해 생각할 때, 이 키워드들이 문제 설명·요구사항과 어떻게 맞닿는지 순서대로 적어 보면 정리가 될 거야. (오프라인 모드 삐약)`;
       } else {
         mock = `지금은 서버와 연결되지 않아 AI 답변은 어렵지만, 「${currentProblem?.title || '문제'}」 설명을 문장 단위로 다시 읽고, 모르는 용어만 골라 정리해 보자. 그다음에 같은 질문을 다시 보내줘도 돼, 삐약!`;
       }
@@ -595,10 +627,13 @@ export function Quiz({ t, params }) {
     const currentProblem = quizList[currentIndex];
     let isCorrect = false;
     if (currentProblem.type === 'multiple' || currentProblem.type === 'ox') {
-      if (!selectedOption) { alert("답을 선택해주세요!"); return; }
-      isCorrect = (selectedOption === currentProblem.answer);
+      if (!selectedOption) {
+        alert('답을 선택해주세요!');
+        return;
+      }
+      isCorrect = selectedOption === currentProblem.answer;
     } else {
-      isCorrect = currentProblem.keywords.every(kw => codeValue.includes(kw));
+      isCorrect = currentProblem.keywords.every((kw) => codeValue.includes(kw));
     }
     addAttempt({
       id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -610,29 +645,34 @@ export function Quiz({ t, params }) {
       desc: currentProblem.desc,
       difficulty: currentProblem.difficulty,
       keywords: currentProblem.keywords || [],
-      userCode: currentProblem.type === 'coding' ? codeValue : selectedOption || "",
-      expectedExample: currentProblem.expectedExample || currentProblem.answer || "",
-      isCorrect
+      userCode: currentProblem.type === 'coding' ? codeValue : selectedOption || '',
+      expectedExample: currentProblem.expectedExample || currentProblem.answer || '',
+      isCorrect,
     });
     setIsSubmitted(true);
-    addTermLog("============================", "system");
-    addTermLog("Evaluating code...", "system");
+    addTermLog('============================', 'system');
+    addTermLog('Evaluating code...', 'system');
     setTimeout(() => {
       if (cctvResultClearTimeoutRef.current) {
         clearTimeout(cctvResultClearTimeoutRef.current);
         cctvResultClearTimeoutRef.current = null;
       }
       if (isCorrect) {
-        setCorrectCount(c => c + 1);
-        addTermLog("Compile Success: 0 errors, 0 warnings", "success");
-        addTermLog("Result: O 정답입니다!", "success");
-        setResultStatus("결과: 🎉 정답이야!"); setResultColor("#55ff55");
-        setChatHistory(prev => [...prev, { role: 'bot', text: "정답! 아주 잘했어 삐약! 👏" }]);
+        setCorrectCount((c) => c + 1);
+        addTermLog('Compile Success: 0 errors, 0 warnings', 'success');
+        addTermLog('Result: O 정답입니다!', 'success');
+        setResultStatus('결과: 🎉 정답이야!');
+        setResultColor('#55ff55');
+        setChatHistory((prev) => [...prev, { role: 'bot', text: '정답! 아주 잘했어 삐약! 👏' }]);
         setCctvResultTone('correct');
       } else {
-        addTermLog("Result: X 오답입니다!", "error");
-        setResultStatus("결과: ❌ 오답입니다!"); setResultColor("#ff5555");
-        setChatHistory(prev => [...prev, { role: 'bot', text: "아쉽지만 오답이야... 다음 번엔 맞출 수 있을 거야! 🐥" }]);
+        addTermLog('Result: X 오답입니다!', 'error');
+        setResultStatus('결과: ❌ 오답입니다!');
+        setResultColor('#ff5555');
+        setChatHistory((prev) => [
+          ...prev,
+          { role: 'bot', text: '아쉽지만 오답이야... 다음 번엔 맞출 수 있을 거야! 🐥' },
+        ]);
         setCctvResultTone('wrong');
       }
       cctvResultClearTimeoutRef.current = window.setTimeout(() => {
@@ -642,7 +682,7 @@ export function Quiz({ t, params }) {
     }, 500);
   };
 
-  if(!quizList.length) return <div style={{color:'white', padding: '50px'}}>Loading...</div>;
+  if (!quizList.length) return <div style={{ color: 'white', padding: '50px' }}>Loading...</div>;
   const currentProblem = quizList[currentIndex];
   const savedUser = JSON.parse(localStorage.getItem('chickode_user') || 'null');
   const rawNickname = savedUser ? savedUser.nickname : getProfile().name;
@@ -666,9 +706,7 @@ export function Quiz({ t, params }) {
     lastMcqAt: lastMcqRef.current,
     lastActivityAt: lastActivityRef.current,
   });
-
   const isCctvWarnState = cctvK <= 1;
-
   const reactionChickClass = [
     'quiz-reaction-chick-wrap',
     isCctvWarnState
@@ -758,7 +796,9 @@ export function Quiz({ t, params }) {
   return (
     <div className="coding-view" style={{ display: 'flex' }}>
       <nav className="top-nav">
-        <button id="backToMain" title="돌아가기" onClick={() => navigate(-1)}>❮</button>
+        <button id="backToMain" title="돌아가기" onClick={() => navigate(-1)}>
+          ❮
+        </button>
         <div className="logo">CHICKODE</div>
         <div className="top-right-group">
           <span className="chapter-badge">Chapter {settings.chapter}</span>
@@ -768,7 +808,9 @@ export function Quiz({ t, params }) {
       <main className={`content${isChatOpen ? '' : ' content--quiz-chat-collapsed'}`}>
         <div className="left">
           <div className="problem-card">
-            <h3>[{currentIndex + 1}/{quizList.length}] {currentProblem.title}</h3>
+            <h3>
+              [{currentIndex + 1}/{quizList.length}] {currentProblem.title}
+            </h3>
             <p>{currentProblem.desc}</p>
           </div>
           <div
@@ -817,7 +859,14 @@ export function Quiz({ t, params }) {
                           <img src={tutorPersona.image} alt="" />
                         </div>
                       )}
-                      <div style={{ display:'flex', flexDirection:'column', alignItems: m.role==='bot'?'flex-start':'flex-end', maxWidth:'75%' }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: m.role === 'bot' ? 'flex-start' : 'flex-end',
+                          maxWidth: '75%',
+                        }}
+                      >
                         <div className="msg-meta">{m.role === 'bot' ? tutorPersona.label : '나'}</div>
                         <div className="bubble">{m.text}</div>
                       </div>
@@ -825,34 +874,32 @@ export function Quiz({ t, params }) {
                   ))}
                 </div>
                 <div className="chat-guide-chips">
-                  {currentProblem.type === 'coding'
-                    ? (currentProblem.keywords || []).slice(0, 8).map((kw, i) => {
-                        const q = keywordToGuideQuestion(kw, i);
-                        return (
-                          <button
-                            key={`${kw}-${i}`}
-                            type="button"
-                            className="chat-guide-chip"
-                            onClick={() => handleSendChat(q, kw)}
-                          >
-                            {q}
-                          </button>
-                        );
-                      })
-                    : MCQ_GUIDE_CHIP_QUESTIONS.map((q) => (
-                        <button
-                          key={q}
-                          type="button"
-                          className="chat-guide-chip"
-                          onClick={() => handleSendChat(q)}
-                        >
-                          {q}
-                        </button>
-                      ))}
+                  {(currentProblem.keywords || []).slice(0, 3).map((kw, i) => {
+                    const q = keywordToGuideQuestion(kw, i);
+                    return (
+                      <button
+                        key={`${kw}-${i}`}
+                        type="button"
+                        className="chat-guide-chip"
+                        onClick={() => handleSendChat(q, kw)}
+                      >
+                        {q}
+                      </button>
+                    );
+                  })}
                 </div>
                 <div className="chat-input-area">
-                  <input type="text" placeholder={t('chat_placeholder')} value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSendChat()} />
-                  <button type="button" onClick={() => handleSendChat()}>{t('btn_send')}</button>
+                  <input
+                    type="text"
+                    placeholder={t('chat_placeholder')}
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSendChat()}
+                    style={{ height: 44, fontSize: 15 }}
+                  />
+                  <button type="button" onClick={() => handleSendChat()} style={{ height: 44 }}>
+                    {t('btn_send')}
+                  </button>
                 </div>
               </div>
             </div>
@@ -861,6 +908,9 @@ export function Quiz({ t, params }) {
           <div className="quiz-center-reaction-split">
             {centerColumn}
             <aside className="quiz-cctv-panel" aria-label="CHICK CAM">
+              <style>{`
+                @keyframes chickCamRecBlink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0.25; } }
+              `}</style>
               <div className="quiz-cctv-vignette" aria-hidden />
               <div className="quiz-cctv-desk-shade" aria-hidden />
               <span className="quiz-cctv-corner quiz-cctv-corner-tl" aria-hidden />
@@ -873,15 +923,15 @@ export function Quiz({ t, params }) {
                   <span className="quiz-cctv-live-dot" aria-hidden />
                   CHICK CAM 01
                 </span>
-                <span className="quiz-cctv-rec">REC</span>
+                <span className="quiz-cctv-rec" style={{ animation: 'chickCamRecBlink 1s infinite' }}>
+                  REC
+                </span>
               </header>
 
               <div className="quiz-cctv-body">
                 <div className="quiz-cctv-stack">
                   <div className="quiz-cctv-speak-col">
-                    <div
-                      className={`quiz-cctv-bubble${isCctvWarnState ? ' quiz-cctv-bubble--warn' : ''}`}
-                    >
+                    <div className={`quiz-cctv-bubble${isCctvWarnState ? ' quiz-cctv-bubble--warn' : ''}`}>
                       {reactionMessage}
                     </div>
                     <div className={`quiz-cctv-chick-hero ${reactionChickClass}`}>

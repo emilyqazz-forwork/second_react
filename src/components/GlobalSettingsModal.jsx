@@ -1,9 +1,33 @@
+import { useEffect, useState } from 'react';
+
 export function GlobalSettingsModal({ onClose, t, params, setParams }) {
   const safeParams = {
     ...params,
     bgm: params?.bgm ?? true,
     bgmTrack: params?.bgmTrack ?? 'cabin',
     persona: params?.persona ?? 'default',
+  };
+
+  const [dontShowTutorial, setDontShowTutorial] = useState(true);
+
+  useEffect(() => {
+    try {
+      const seenRaw = window.localStorage.getItem('chickode_tutorial_seen');
+      const seen = seenRaw === 'true' || seenRaw === '1';
+      setDontShowTutorial(seen);
+    } catch {
+      setDontShowTutorial(true);
+    }
+  }, []);
+
+  const applyTutorialPref = (checked) => {
+    setDontShowTutorial(checked);
+    try {
+      if (checked) window.localStorage.setItem('chickode_tutorial_seen', 'true');
+      else window.localStorage.removeItem('chickode_tutorial_seen');
+    } catch {
+      // noop
+    }
   };
 
   const handleSave = () => {
@@ -104,6 +128,59 @@ export function GlobalSettingsModal({ onClose, t, params, setParams }) {
           <button className="clay-submit" onClick={handleSave} style={{ gridColumn: '1 / -1' }}>
             {t('btn_save')}
           </button>
+
+          <div style={{ gridColumn: '1 / -1', marginTop: 6, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                fontSize: 13,
+                color: '#5c3d2e',
+                userSelect: 'none',
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={dontShowTutorial}
+                onChange={(e) => applyTutorialPref(e.target.checked)}
+              />
+              코치마크 튜토리얼 다시 보지 않기
+            </label>
+
+            <button
+              type="button"
+              onClick={() => {
+                try {
+                  window.localStorage.removeItem('chickode_tutorial_seen');
+                } catch {
+                  // noop
+                }
+                onClose();
+                // Home.jsx에서 이벤트를 받아 코치마크를 다시 시작함
+                window.setTimeout(() => {
+                  try {
+                    window.dispatchEvent(new Event('chickode:start_tutorial'));
+                  } catch {
+                    // noop
+                  }
+                }, 0);
+              }}
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                borderRadius: 10,
+                border: '1px solid rgba(0,0,0,0.15)',
+                background: '#5c3d2e',
+                color: '#fff',
+                fontWeight: 900,
+                cursor: 'pointer',
+              }}
+            >
+              튜토리얼 다시 보기
+            </button>
+          </div>
         </div>
       </div>
     </div>
