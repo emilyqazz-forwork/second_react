@@ -88,7 +88,14 @@ export const translations = {
         res_total: "전체 문제 수",
         res_correct: "맞춘 문제 수",
         res_accuracy: "정답률",
-        btn_go_home: "홈으로 돌아가기"
+        btn_go_home: "홈으로 돌아가기",
+        cctv_title: "감시 항목",
+        cctv_coding: "코드 작성 중",
+        cctv_tab: "탭 이탈 없음",
+        cctv_steady: "꾸준히 진행 중",
+        cctv_mouse: "자리 이탈 없음",
+        cctv_open_chat: "챗봇 열기",
+        cctv_tagline: "딴짓 금지! 보고 있다!",
     },
     en: {
         nav_logo: "CHICKODE",
@@ -177,7 +184,14 @@ export const translations = {
         res_total: "Total Questions",
         res_correct: "Correct Answers",
         res_accuracy: "Accuracy",
-        btn_go_home: "Back to Home"
+        btn_go_home: "Back to Home",
+        cctv_title: "Watch List",
+        cctv_coding: "Coding",
+        cctv_tab: "No Tab Switch",
+        cctv_steady: "Steady Progress",
+        cctv_mouse: "Stay Focused",
+        cctv_open_chat: "Open Chat",
+        cctv_tagline: "No Slacking! I'm Watching!",
     }
 };
 

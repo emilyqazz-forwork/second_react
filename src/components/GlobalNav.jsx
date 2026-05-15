@@ -156,7 +156,7 @@ export function GlobalNav({ onOpenSettings, onOpenAuth, t, params, setParams }) 
         </div>
         <ul className="nav-links">
           <li><Link to="/">{t('nav_home')}</Link></li>
-          <li><Link to="/quiz">문제풀기</Link></li>
+          <li><Link to="/quiz">{t('btn_quiz')}</Link></li>
           <li><Link to="/note">{t('nav_note')}</Link></li>
           <li><Link to="/pattern">{t('nav_pattern') || "패턴분석"}</Link></li>
           <li><Link to="/minigame">{t('nav_minigame')}</Link></li>
@@ -166,7 +166,7 @@ export function GlobalNav({ onOpenSettings, onOpenAuth, t, params, setParams }) 
               onClick={(e) => { e.preventDefault(); onOpenSettings(); }}
               style={{ cursor: 'pointer' }}
             >{/* nav link 스타일을 그대로 타게 함 */}
-              설정
+              {t('btn_setting')}
             </a>
           </li>
         </ul>

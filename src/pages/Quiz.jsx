@@ -67,6 +67,58 @@ const CCTV_MSG_WRONG = [
   '괜찮아, 다음엔 맞출 수 있어!',
 ];
 
+const CCTV_MSG_HIGH_EN = [
+  "You're doing great! Keep it up!",
+  'Nice work! 🐥',
+  "That's the spirit!",
+  'Stay focused!',
+  "You're on fire!",
+  'Proud of you~',
+];
+const CCTV_MSG_MID_EN = [
+  'Stay focused! 🐥',
+  'Getting a bit distracted?',
+  "Don't lose focus!",
+  'I can see you daydreaming~',
+  'Almost there, keep going!',
+  'Focus is slipping...',
+];
+const CCTV_MSG_LOW_EN = [
+  'Hey! What are you doing?!',
+  '⚠️ Warning! Slacking detected!',
+  "You'll get them all wrong!",
+  'Focus RIGHT NOW!',
+  "Don't forget I'm watching!",
+  'You came here to study, right?!',
+];
+const CCTV_MSG_TAB_EN = [
+  'Where did you go? 👀',
+  'I know you watched YouTube!',
+  'Tab switch detected... suspicious!',
+  'Did you ask another AI? 🐥',
+  'Caught you! Focus dropping!',
+  'Come back here~ 🐥',
+];
+const CCTV_MSG_MOUSE_EN = [
+  'Trying to escape? 🐥',
+  'Mouse escape detected! 👀',
+  'Where are you going?!',
+  'Why is your hand over there?',
+  'I know you want your phone!',
+];
+const CCTV_MSG_CORRECT_EN = [
+  "Correct! That's my student!",
+  'Perfect! 🎉',
+  'Amazing! You got it!',
+  'Worth watching you~ 🐥',
+];
+const CCTV_MSG_WRONG_EN = [
+  'Aww... think again!',
+  "Wrong! Should've focused more!",
+  'Need more study on this~',
+  "It's okay, next time!",
+];
+
 const CCTV_MSG_BY_SITUATION = {
   high: CCTV_MSG_HIGH,
   mid: CCTV_MSG_MID,
@@ -75,6 +127,16 @@ const CCTV_MSG_BY_SITUATION = {
   mouse: CCTV_MSG_MOUSE,
   correct: CCTV_MSG_CORRECT,
   wrong: CCTV_MSG_WRONG,
+};
+
+const CCTV_MSG_BY_SITUATION_EN = {
+  high: CCTV_MSG_HIGH_EN,
+  mid: CCTV_MSG_MID_EN,
+  low: CCTV_MSG_LOW_EN,
+  tab: CCTV_MSG_TAB_EN,
+  mouse: CCTV_MSG_MOUSE_EN,
+  correct: CCTV_MSG_CORRECT_EN,
+  wrong: CCTV_MSG_WRONG_EN,
 };
 
 /** CHICK CAM — 페르소나별 멘트 */
@@ -106,12 +168,62 @@ const CCTV_MSG_CHURCH = {
   wrong: ['괜찮아요~ 다음엔 맞출 수 있어요', '실수는 배움의 한 조각이에요~', '다시 생각해봐요, 응원할게요~', '힘내요, 포기하지 마요~'],
 };
 
+const CCTV_MSG_RACER_EN = {
+  high: ['Not bad!', 'Keep that pace!', 'You got this!', 'Stay locked in!', 'Almost done!', 'Nice, keep going!'],
+  mid: ['Focus!!', 'Quit slacking!', 'Faster faster!', 'Hands on keyboard!', 'Switching tabs again?!', 'One beat at a time!'],
+  low: ['What are you doing?!', 'Focus is gone!', "You'll blow it all!", 'Back to the screen!', 'You came to study?!', 'Get back now!'],
+  tab: ['Where did you go!', 'Close that tab!', 'No YouTube!', 'Slacking again?!', 'Come back now!', "I'm watching!"],
+  mouse: ['Running away?', 'Where are your hands!', 'Off screen!', 'Phone down!', 'Stay in your seat!'],
+  correct: ['Yes! Correct!', "Let's go!", "That's it!", 'Knew it!', 'Pass!'],
+  wrong: ['Wrong. Again!', 'So close, once more!', "You weren't focused!", 'Try again!'],
+};
+const CCTV_MSG_PROF_EN = {
+  high: ['Your engagement is satisfactory.', 'Good progress.', 'Please maintain this pace.', 'Appropriate study attitude.', 'Excellent focus.', 'This pace is commendable.'],
+  mid: ['Learning efficiency is declining.', 'Please maintain focus.', 'Mild distraction observed.', 'Recalibration needed for goals.', 'Please find your rhythm.', 'Attention is diverging.'],
+  low: ['Failed to maintain focus.', 'Session at risk level.', 'Correct your attitude immediately.', 'Repeated disengagement.', 'Drifting from learning goals.', 'Warning: minimum focus level.'],
+  tab: ['Tab switch detected.', 'Appears you left the task.', 'Please return to study.', 'Inappropriate multitasking.', 'Return to the lesson screen.', 'Caution: tab departure.'],
+  mouse: ['Pointer departure confirmed.', 'Left the work area.', 'Check input device position.', 'Keep pointer in study zone.', 'Repeated departure.'],
+  correct: ['Correct. Excellent.', 'Very accurate solution.', 'Concept understanding confirmed.', 'Outstanding result.', 'Please continue.'],
+  wrong: ['Incorrect. Review needed.', 'Error in solution.', 'Please verify concept.', 'Check your logic.'],
+};
+const CCTV_MSG_CHURCH_EN = {
+  high: ["You're doing well~", 'You can do it!', "Let's do this together!", 'So good~', 'God is watching~ proud of you', 'Keep going like this~'],
+  mid: ['Just a little more~', "It's okay, focus again~", "Let's take it slow together~", 'Set aside distractions for a bit~', 'Cheer up, almost there~', 'Pray and focus~'],
+  low: ["It's okay~ you made it this far", 'Come back slowly~', 'Mistakes are fine', "Let's start again together!", "Don't give up, you can do it~", "Hmm... lost focus? That's okay~"],
+  tab: ['Welcome back~ were you away?', "Let's do this together~", 'YouTube can wait~ study time now', 'Thanks for coming back~', 'Come back to the tab, slowly~', 'I was waiting for you~'],
+  mouse: ["Where are you going~ stay with me", "Don't let go~", 'Back to the screen, gently~', 'Put the phone down for a bit~', "Let's stay together here~"],
+  correct: ['Congrats! Correct~', 'Well done!', 'So happy~', 'Thankful~', "Amazing, let's celebrate together!"],
+  wrong: ["It's okay~ you'll get the next one", 'Mistakes are part of learning~', 'Think again, cheering for you~', "Don't give up~"],
+};
+
 const CCTV_MSG_BY_PERSONA = {
   default: CCTV_MSG_BY_SITUATION,
   racer: CCTV_MSG_RACER,
   prof: CCTV_MSG_PROF,
   church: CCTV_MSG_CHURCH,
 };
+
+const CCTV_MSG_BY_PERSONA_EN = {
+  default: CCTV_MSG_BY_SITUATION_EN,
+  racer: CCTV_MSG_RACER_EN,
+  prof: CCTV_MSG_PROF_EN,
+  church: CCTV_MSG_CHURCH_EN,
+};
+
+function getCctvSituationMessages(lang) {
+  return lang === 'en' ? CCTV_MSG_BY_SITUATION_EN : CCTV_MSG_BY_SITUATION;
+}
+
+function getCctvPersonaTable(persona, lang) {
+  const map = lang === 'en' ? CCTV_MSG_BY_PERSONA_EN : CCTV_MSG_BY_PERSONA;
+  return map[persona] || map.default;
+}
+
+function pickCctvPool(persona, situation, lang) {
+  const situ = getCctvSituationMessages(lang);
+  const table = getCctvPersonaTable(persona, lang);
+  return table[situation] || situ.high;
+}
 
 const TUTOR_PERSONA = {
   default: { label: '병아리 선배 🐥', image: '/images/chick.png' },
@@ -379,10 +491,10 @@ export function Quiz({ t, params }) {
   const [chatHistory, setChatHistory] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const lang = params?.lang ?? 'ko';
   const [reactionMessage, setReactionMessage] = useState(() => {
-    const p = readStoredPersona('default');
-    const table = CCTV_MSG_BY_PERSONA[p] || CCTV_MSG_BY_PERSONA.default;
-    return pickRandom(table.high || CCTV_MSG_HIGH);
+    const p = readStoredPersona(params?.persona ?? 'default');
+    return pickRandom(pickCctvPool(p, 'high', params?.lang ?? 'ko'));
   });
   const [studySeconds, setStudySeconds] = useState(0);
   const [isEditorTyping, setIsEditorTyping] = useState(false);
@@ -514,13 +626,12 @@ export function Quiz({ t, params }) {
 
   useEffect(() => {
     if (isChatOpen) return;
-    const byPersona = CCTV_MSG_BY_PERSONA[persona] || CCTV_MSG_BY_PERSONA.default;
-    const pool = byPersona[cctvBubbleSituation] || CCTV_MSG_HIGH;
+    const pool = pickCctvPool(persona, cctvBubbleSituation, lang);
     const tick = () => setReactionMessage(pickRandom(pool));
     tick();
     const id = window.setInterval(tick, 15000);
     return () => clearInterval(id);
-  }, [isChatOpen, cctvBubbleSituation, persona]);
+  }, [isChatOpen, cctvBubbleSituation, persona, lang]);
 
   useEffect(() => {
     setIsEditorTyping(false);
@@ -942,23 +1053,23 @@ export function Quiz({ t, params }) {
                     </div>
                   </div>
                   <div className="quiz-cctv-checklist">
-                    <div className="quiz-cctv-checklist-title">감시 항목</div>
+                    <div className="quiz-cctv-checklist-title">{t('cctv_title')}</div>
                     <ul className="quiz-cctv-checklist-ul">
                       <li className={cctvItemCodeTyping ? 'checked' : ''}>
                         <span className="quiz-cctv-check">{cctvItemCodeTyping ? '✓' : ''}</span>
-                        코드 작성 중
+                        {t('cctv_coding')}
                       </li>
                       <li className={cctvTabOk ? 'checked' : ''}>
                         <span className="quiz-cctv-check">{cctvTabOk ? '✓' : ''}</span>
-                        탭 이탈 없음
+                        {t('cctv_tab')}
                       </li>
                       <li className={cctvSteadyTyping ? 'checked' : ''}>
                         <span className="quiz-cctv-check">{cctvSteadyTyping ? '✓' : ''}</span>
-                        꾸준히 진행 중
+                        {t('cctv_steady')}
                       </li>
                       <li className={cctvMouseOk ? 'checked' : ''}>
                         <span className="quiz-cctv-check">{cctvMouseOk ? '✓' : ''}</span>
-                        자리 이탈 없음
+                        {t('cctv_mouse')}
                       </li>
                     </ul>
                   </div>
@@ -974,9 +1085,9 @@ export function Quiz({ t, params }) {
                         setIsChatOpen(true);
                       }}
                     >
-                      챗봇 열기
+                      {t('cctv_open_chat')}
                     </button>
-                    <span className="quiz-cctv-footer-tagline">딴짓 금지! 보고 있다!</span>
+                    <span className="quiz-cctv-footer-tagline">{t('cctv_tagline')}</span>
                   </div>
                 </div>
               </div>
