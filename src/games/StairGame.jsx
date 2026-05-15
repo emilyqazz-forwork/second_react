@@ -8,6 +8,14 @@ const JUMP_V = -11;
 const PLATFORM_W = 80;
 const PLATFORM_H = 15;
 
+function rollPlatformType() {
+  const r = Math.random();
+  if (r < 0.8) return 'normal';
+  if (r < 0.9) return 'spring';
+  if (r < 0.95) return 'bomb';
+  return 'reverse';
+}
+
 const QUIZ_POOL = [
   { q: 'System.out.println(1 + 2); 결과는?', opts: ['1', '2', '3', '12'], ans: '3' },
   { q: 'String s = "Hi"; s.length() 결과는?', opts: ['1', '2', '3', '4'], ans: '2' },
@@ -24,13 +32,14 @@ const QUIZ_POOL = [
 function generatePlatforms() {
   const platforms = [];
   let y = H - 50;
-  platforms.push({ x: 100, y, id: 0 });
+  platforms.push({ x: 100, y, id: 0, type: 'normal' });
   for (let i = 1; i < 20; i++) {
     y -= 40 + Math.random() * 10;
     platforms.push({
       x: Math.random() * (W - PLATFORM_W),
       y,
       id: i,
+      type: rollPlatformType(),
     });
   }
   return platforms;
@@ -55,6 +64,9 @@ export default function StairGame({ onBack }) {
     highestPlatformY: initialPlatforms[initialPlatforms.length - 1].y,
     rainDrops: null,
     stars: null,
+    bombFlash: 0,
+    reverseTimer: 0,
+    caveDecor: null,
   });
   const [uiPhase, setUiPhase] = useState('idle');
   const [score, setScore] = useState(0);
@@ -114,6 +126,177 @@ export default function StairGame({ onBack }) {
     chickImg.src = '/images/gamechick.png';
     chickImgRef.current = chickImg;
 
+    const stairJumpSfx = new Audio();
+    stairJumpSfx.src = new URL('/audio/stair/stairjump.mp3', window.location.origin).href;
+    stairJumpSfx.volume = 0.65;
+    stairJumpSfx.load();
+
+    function playStairJump() {
+      stairJumpSfx.currentTime = 0;
+      stairJumpSfx.play().catch(() => {});
+    }
+
+    function makeStairSfx(path) {
+      const a = new Audio();
+      a.src = new URL(path, window.location.origin).href;
+      a.volume = 0.65;
+      a.load();
+      return a;
+    }
+    const stairBombSfx = makeStairSfx('/audio/stair/stairbomb.mp3');
+    const dizzyStairsSfx = makeStairSfx('/audio/stair/dizzystair.mp3');
+    const stairBoingSfx = makeStairSfx('/audio/stair/stairboing.mp3');
+    const stairFallingSfx = makeStairSfx('/audio/stair/stairfalling.mp3');
+
+    function playStairBomb() {
+      stairBombSfx.currentTime = 0;
+      stairBombSfx.play().catch(() => {});
+    }
+    function playDizzyStairs() {
+      dizzyStairsSfx.currentTime = 0;
+      dizzyStairsSfx.play().catch(() => {});
+    }
+    function playStairBoing() {
+      stairBoingSfx.currentTime = 0;
+      stairBoingSfx.play().catch(() => {});
+    }
+    function playStairFalling() {
+      stairFallingSfx.currentTime = 0;
+      stairFallingSfx.play().catch(() => {});
+    }
+
+    /** 압축 스프링(금속 코일) — 이모지 대신 실사 느낌 */
+    function drawMetalSpringAbovePlatform(ctx, cx, platformTopY) {
+      const bottomY = platformTopY - 2;
+      const coilH = 20;
+      const coils = 5;
+      const amp = 3.8;
+      const steps = coils * 26;
+      ctx.save();
+      const lg = ctx.createLinearGradient(cx - 6, bottomY - coilH, cx + 6, bottomY);
+      lg.addColorStop(0, '#4a4d52');
+      lg.addColorStop(0.25, '#9ea3ab');
+      lg.addColorStop(0.5, '#f0f2f6');
+      lg.addColorStop(0.72, '#8e9298');
+      lg.addColorStop(1, '#3d4044');
+      ctx.strokeStyle = lg;
+      ctx.lineWidth = 2.85;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        const ang = t * Math.PI * 2 * coils;
+        const y = bottomY - t * coilH;
+        const x = cx + Math.cos(ang) * amp;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,0.42)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        const ang = t * Math.PI * 2 * coils + 0.35;
+        const y = bottomY - t * coilH - 0.5;
+        const x = cx + Math.cos(ang) * (amp * 0.5);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawRealisticRock(ctx, r) {
+      ctx.save();
+      ctx.translate(r.x, r.y);
+      ctx.rotate(r.rot);
+      ctx.scale(1, 0.7);
+      const maxR = Math.max(...r.pts.map((p) => p.rad));
+      ctx.fillStyle = 'rgba(0,0,0,0.22)';
+      ctx.beginPath();
+      ctx.ellipse(3, maxR * 0.55, maxR * 0.95, maxR * 0.38, 0.15, 0, Math.PI * 2);
+      ctx.fill();
+      const g = ctx.createRadialGradient(-maxR * 0.4, -maxR * 0.45, maxR * 0.06, 0, 0, maxR * 1.2);
+      g.addColorStop(0, '#c4c0b4');
+      g.addColorStop(0.28, '#8a8476');
+      g.addColorStop(0.55, '#5c564a');
+      g.addColorStop(0.82, '#3a352e');
+      g.addColorStop(1, '#1e1b18');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      for (let i = 0; i < r.pts.length; i++) {
+        const p = r.pts[i];
+        const x = Math.cos(p.ang) * p.rad;
+        const y = Math.sin(p.ang) * p.rad;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(20,18,14,0.5)';
+      ctx.lineWidth = 1.1;
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.16)';
+      ctx.beginPath();
+      ctx.ellipse(-maxR * 0.32, -maxR * 0.48, maxR * 0.28, maxR * 0.16, -0.35, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function cubicBezierPoint(t, p0, p1, p2, p3) {
+      const u = 1 - t;
+      const u2 = u * u;
+      const u3 = u2 * u;
+      const t2 = t * t;
+      const t3 = t2 * t;
+      return {
+        x: u3 * p0.x + 3 * u2 * t * p1.x + 3 * u * t2 * p2.x + t3 * p3.x,
+        y: u3 * p0.y + 3 * u2 * t * p1.y + 3 * u * t2 * p2.y + t3 * p3.y,
+      };
+    }
+
+    function drawRealisticWorm(ctx, w) {
+      const p0 = { x: w.x0, y: w.y0 };
+      const p1 = { x: w.cx1, y: w.cy1 };
+      const p2 = { x: w.cx2, y: w.cy2 };
+      const p3 = { x: w.x1, y: w.y1 };
+      const segments = 26;
+      const pts = [];
+      for (let i = 0; i <= segments; i++) {
+        pts.push(cubicBezierPoint(i / segments, p0, p1, p2, p3));
+      }
+      for (let i = pts.length - 1; i >= 0; i--) {
+        const pt = pts[i];
+        const t = i / segments;
+        const rad = (i === 0 ? 5.2 : 2.9 + Math.sin(t * Math.PI * 5 + w.x0) * 0.45) * 0.95;
+        const rg = ctx.createRadialGradient(pt.x - rad * 0.35, pt.y - rad * 0.4, 0, pt.x, pt.y, rad);
+        rg.addColorStop(0, '#f5d4c8');
+        rg.addColorStop(0.35, '#d88878');
+        rg.addColorStop(0.65, '#a05048');
+        rg.addColorStop(1, '#4a2824');
+        ctx.fillStyle = rg;
+        ctx.beginPath();
+        ctx.ellipse(pt.x, pt.y, rad, rad * 0.68, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.strokeStyle = 'rgba(60,25,22,0.4)';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < pts.length; i += 2) {
+        const pt = pts[i];
+        const rad = i === 0 ? 5 : 3.2;
+        ctx.beginPath();
+        ctx.ellipse(pt.x, pt.y, rad * 0.88, rad * 0.58, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.fillStyle = 'rgba(30,12,10,0.65)';
+      ctx.beginPath();
+      ctx.arc(pts[0].x + 1.2, pts[0].y - 0.8, 0.75, 0, Math.PI * 2);
+      ctx.arc(pts[0].x - 0.8, pts[0].y - 0.8, 0.65, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
     function resetState() {
       const platforms = generatePlatforms();
       Object.assign(g, {
@@ -126,9 +309,13 @@ export default function StairGame({ onBack }) {
         phase: 'playing',
         nextPlatformId: 20,
         highestPlatformY: platforms[platforms.length - 1].y,
+        bombFlash: 0,
+        reverseTimer: 0,
+        caveDecor: null,
       });
       setScore(0);
       setUiPhase('playing');
+      playStairJump();
     }
 
     const onKey = (e) => {
@@ -189,17 +376,70 @@ export default function StairGame({ onBack }) {
           const r = Math.round(r1 + (r2 - r1) * t);
           const gg = Math.round(g1 + (g2 - g1) * t);
           const b = Math.round(b1 + (b2 - b1) * t);
-          return `rgb(${r},${gg},${b})`;
+          const hx = (n) => n.toString(16).padStart(2, '0');
+          return `#${hx(r)}${hx(gg)}${hx(b)}`;
         }
 
-        const topColor = lerpColor(cur.top, nxt.top, t);
-        const botColor = lerpColor(cur.bot, nxt.bot, t);
+        const skyTop = lerpColor(cur.top, nxt.top, t);
+        const skyBot = lerpColor(cur.bot, nxt.bot, t);
+        const caveBlend = Math.max(0, Math.min(1, 1 - altitude / 900));
+        const topColor = lerpColor(skyTop, '#3d2b1a', caveBlend);
+        const botColor = lerpColor(skyBot, '#5c3d1e', caveBlend);
 
         const grad = ctx.createLinearGradient(0, 0, 0, H);
         grad.addColorStop(0, topColor);
         grad.addColorStop(1, botColor);
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, W, H);
+
+        if (caveBlend > 0.02) {
+          if (!g.caveDecor) {
+            const rockCount = 5 + Math.floor(Math.random() * 4);
+            const wormCount = 3 + Math.floor(Math.random() * 3);
+            g.caveDecor = {
+              rocks: Array.from({ length: rockCount }, () => {
+                const x = Math.random() * W;
+                const y = 40 + Math.random() * (H - 80);
+                const rot = Math.random() * Math.PI;
+                const n = 7 + Math.floor(Math.random() * 4);
+                const base = 10 + Math.random() * 14;
+                const pts = [];
+                for (let i = 0; i < n; i++) {
+                  const ang = (i / n) * Math.PI * 2 - Math.PI / 2;
+                  const rad = base * (0.72 + Math.random() * 0.48);
+                  pts.push({ ang, rad });
+                }
+                return { x, y, rot, pts };
+              }),
+              worms: Array.from({ length: wormCount }, () => {
+                const x0 = 22 + Math.random() * (W - 75);
+                const y0 = 52 + Math.random() * (H - 108);
+                const len = 46 + Math.random() * 44;
+                const bend = 16 + Math.random() * 24;
+                const dip = (Math.random() - 0.5) * 18;
+                return {
+                  x0,
+                  y0,
+                  x1: x0 + len,
+                  y1: y0 + dip,
+                  cx1: x0 + len * 0.28,
+                  cy1: y0 - bend,
+                  cx2: x0 + len * 0.72,
+                  cy2: y0 + bend * 0.55,
+                };
+              }),
+            };
+          }
+          ctx.save();
+          ctx.globalAlpha = caveBlend;
+          for (const r of g.caveDecor.rocks) {
+            drawRealisticRock(ctx, r);
+          }
+          for (const w of g.caveDecor.worms) {
+            drawRealisticWorm(ctx, w);
+          }
+          ctx.restore();
+        }
 
         // 비 효과
         if (altitude > 2100 && altitude < 4800) {
@@ -250,15 +490,11 @@ export default function StairGame({ onBack }) {
           g.stars = null;
         }
 
-        // 땅 (낮은 고도)
-        if (altitude < 200) {
-          const groundAlpha = 1 - altitude / 200;
-          ctx.fillStyle = `rgba(101,163,97,${groundAlpha})`;
-          ctx.fillRect(0, H - 30, W, 30);
-        }
       }
 
       drawBackground();
+
+      if (g.reverseTimer > 0) g.reverseTimer -= 1;
 
       if (g.phase === 'playing') {
         const bird = g.bird;
@@ -266,18 +502,21 @@ export default function StairGame({ onBack }) {
         bird.vy += GRAVITY;
         bird.y += bird.vy;
 
-        if (g.keys.left) bird.x -= 7;
-        if (g.keys.right) bird.x += 7;
+        const step = 7;
+        const rev = g.reverseTimer > 0;
+        if (g.keys.left) bird.x += rev ? step : -step;
+        if (g.keys.right) bird.x += rev ? -step : step;
 
         if (bird.x < 0) bird.x = W;
         if (bird.x > W) bird.x = 0;
 
         // 카메라 (위로만 따라감)
-        if (bird.y - g.cameraY < H * 0.3) {
-          g.cameraY = bird.y - H * 0.3;
+        if (bird.y - g.cameraY < H * 0.4) {
+          g.cameraY = bird.y - H * 0.4;
         }
 
-        // 플랫폼 충돌
+        // 플랫폼 충돌 (한 프레임에 한 발판만 처리)
+        let landed = null;
         for (const p of g.platforms) {
           if (
             bird.vy > 0 &&
@@ -286,21 +525,43 @@ export default function StairGame({ onBack }) {
             bird.x + 10 > p.x &&
             bird.x - 10 < p.x + PLATFORM_W
           ) {
+            landed = p;
+            break;
+          }
+        }
+        if (landed) {
+          const p = landed;
+          bird.y = p.y - 20;
+          const pType = p.type || 'normal';
+          if (pType === 'bomb') {
+            const py = p.y;
+            bird.vy = 10;
+            g.bombFlash = 1;
+            g.platforms = g.platforms.filter((pl) => Math.abs(pl.y - py) > 120);
+            playStairBomb();
+          } else if (pType === 'spring') {
+            bird.vy = JUMP_V * 3;
+            playStairBoing();
+          } else if (pType === 'reverse') {
             bird.vy = JUMP_V;
-            bird.y = p.y - 20;
+            g.reverseTimer = 180;
+            playDizzyStairs();
+          } else {
+            bird.vy = JUMP_V;
+            playStairJump();
+          }
 
-            if (p.id > g.highestId) {
-              g.highestId = p.id;
-              g.score = p.id;
-              setScore(p.id);
+          if (p.id > g.highestId) {
+            g.highestId = p.id;
+            g.score = p.id;
+            setScore(p.id);
 
-              if (g.score >= g.lastQuizScore + 10) {
-                g.lastQuizScore = g.score;
-                g.phase = 'quiz';
-                setUiPhase('quiz');
-                const q = QUIZ_POOL[Math.floor(Math.random() * QUIZ_POOL.length)];
-                setQuiz(q);
-              }
+            if (g.score >= g.lastQuizScore + 20) {
+              g.lastQuizScore = g.score;
+              g.phase = 'quiz';
+              setUiPhase('quiz');
+              const q = QUIZ_POOL[Math.floor(Math.random() * QUIZ_POOL.length)];
+              setQuiz(q);
             }
           }
         }
@@ -312,14 +573,16 @@ export default function StairGame({ onBack }) {
             x: Math.random() * (W - PLATFORM_W),
             y: g.highestPlatformY,
             id: g.nextPlatformId++,
+            type: rollPlatformType(),
           });
         }
 
         // 오래된 플랫폼 제거
         g.platforms = g.platforms.filter(p => p.y < g.cameraY + H + 300);
 
-        // 게임오버
+        // 게임오버 (화면 아래로 떨어짐)
         if (bird.y - g.cameraY > H + 90) {
+          playStairFalling();
           g.phase = 'gameover';
           setUiPhase('gameover');
         }
@@ -329,13 +592,40 @@ export default function StairGame({ onBack }) {
       for (const p of g.platforms) {
         const screenY = p.y - g.cameraY;
         if (screenY > -20 && screenY < H + 20) {
-          ctx.fillStyle = '#ffffff';
+          const pType = p.type || 'normal';
+          let fill = '#ffffff';
+          let stroke = '#aaaaaa';
+          let emoji = '';
+          let springGraphic = false;
+          if (pType === 'spring') {
+            fill = '#44cc44';
+            stroke = '#2e8b2e';
+            springGraphic = true;
+          } else if (pType === 'bomb') {
+            fill = '#cc4444';
+            stroke = '#8b2020';
+            emoji = '💣';
+          } else if (pType === 'reverse') {
+            fill = '#9944cc';
+            stroke = '#6a2a99';
+            emoji = '🌀';
+          }
+          ctx.fillStyle = fill;
           ctx.beginPath();
           ctx.roundRect(p.x, screenY, PLATFORM_W, PLATFORM_H, 4);
           ctx.fill();
-          ctx.strokeStyle = '#aaaaaa';
+          ctx.strokeStyle = stroke;
           ctx.lineWidth = 1;
           ctx.stroke();
+          if (springGraphic) {
+            drawMetalSpringAbovePlatform(ctx, p.x + PLATFORM_W / 2, screenY);
+          } else if (emoji) {
+            ctx.font = '14px serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.fillStyle = '#111';
+            ctx.fillText(emoji, p.x + PLATFORM_W / 2, screenY - 2);
+          }
         }
       }
 
@@ -352,6 +642,25 @@ export default function StairGame({ onBack }) {
         ctx.font = '28px serif';
         ctx.textAlign = 'center';
         ctx.fillText('🐥', g.bird.x, birdScreenY);
+      }
+
+      if (g.bombFlash > 0) {
+        ctx.fillStyle = `rgba(255,0,0,${g.bombFlash * 0.45})`;
+        ctx.fillRect(0, 0, W, H);
+        g.bombFlash -= 0.06;
+        if (g.bombFlash < 0) g.bombFlash = 0;
+      }
+
+      if (g.reverseTimer > 0 && (g.phase === 'playing' || g.phase === 'quiz')) {
+        ctx.font = 'bold 16px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillStyle = 'rgba(255,255,255,0.95)';
+        ctx.strokeStyle = 'rgba(0,0,0,0.45)';
+        ctx.lineWidth = 3;
+        const msg = '🌀 조작 반전!';
+        ctx.strokeText(msg, W / 2, 10);
+        ctx.fillText(msg, W / 2, 10);
       }
 
       // idle
@@ -392,6 +701,11 @@ export default function StairGame({ onBack }) {
       cancelAnimationFrame(rafRef.current);
       document.removeEventListener('keydown', onKey);
       document.removeEventListener('keyup', onKey);
+      stairJumpSfx.pause();
+      stairBombSfx.pause();
+      dizzyStairsSfx.pause();
+      stairBoingSfx.pause();
+      stairFallingSfx.pause();
     };
   }, []);
 

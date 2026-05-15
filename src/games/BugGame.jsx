@@ -172,6 +172,26 @@ export default function BugGame({ onBack }) {
     chickImg.src = '/images/gamechick.png';
     chickImgRef.current = chickImg;
 
+    const correctBugsSfx = new Audio();
+    correctBugsSfx.src = new URL('/audio/bugs/correctbugs.mp3', window.location.origin).href;
+    correctBugsSfx.volume = 0.65;
+    correctBugsSfx.load();
+
+    const errorBugsSfx = new Audio();
+    errorBugsSfx.src = new URL('/audio/bugs/errorbugs.mp3', window.location.origin).href;
+    errorBugsSfx.volume = 0.65;
+    errorBugsSfx.load();
+
+    function playCorrectBugs() {
+      correctBugsSfx.currentTime = 0;
+      correctBugsSfx.play().catch(() => {});
+    }
+
+    function playErrorBugs() {
+      errorBugsSfx.currentTime = 0;
+      errorBugsSfx.play().catch(() => {});
+    }
+
     function startStage(idx) {
       g.stageIdx = idx;
       g.timeLeft = STAGE_CONFIG[idx].duration;
@@ -352,6 +372,7 @@ export default function BugGame({ onBack }) {
           if (hit) {
             if (w.isBug) {
               g.score += 10;
+              playCorrectBugs();
             } else {
               if (g.shieldCharges > 0) {
                 g.shieldCharges -= 1;
@@ -361,6 +382,7 @@ export default function BugGame({ onBack }) {
               } else {
                 g.miss += 1;
                 g.flashTimer = 20;
+                playErrorBugs();
                 setUiMiss(g.miss);
                 if (g.miss >= MAX_MISS) {
                   clearInterval(g.timerInterval);
@@ -379,6 +401,7 @@ export default function BugGame({ onBack }) {
             if (w.isBug) {
               g.miss += 1;
               g.flashTimer = 20;
+              playErrorBugs();
               setUiMiss(g.miss);
               if (g.miss >= MAX_MISS) {
                 clearInterval(g.timerInterval);
@@ -565,6 +588,8 @@ export default function BugGame({ onBack }) {
       if (g.timerInterval) clearInterval(g.timerInterval);
       document.removeEventListener('keydown', onKey);
       document.removeEventListener('keyup', onKey);
+      correctBugsSfx.pause();
+      errorBugsSfx.pause();
     };
   }, []);
 

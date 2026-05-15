@@ -124,7 +124,14 @@ export const translations = {
 };
 
 export function loadPreferences() {
-    return JSON.parse(localStorage.getItem('chickodePrefs') || '{"theme":"light", "lang":"ko"}');
+    const raw = JSON.parse(localStorage.getItem('chickodePrefs') || '{}');
+    return {
+        theme: raw.theme ?? 'light',
+        lang: raw.lang ?? 'ko',
+        bgm: raw.bgm ?? true,
+        bgmTrack: raw.bgmTrack ?? 'cabin',
+        persona: raw.persona ?? 'default',
+    };
 }
 
 export function savePreferences(prefs) {
@@ -135,6 +142,10 @@ export function useI18n() {
     const [prefs, setPrefs] = useState(loadPreferences());
 
     useEffect(() => {
+        savePreferences(prefs);
+    }, [prefs]);
+
+    useEffect(() => {
         if (prefs.theme === 'dark') {
             document.body.classList.add('dark-mode');
             document.documentElement.classList.add('dark-mode');
@@ -142,12 +153,7 @@ export function useI18n() {
             document.body.classList.remove('dark-mode');
             document.documentElement.classList.remove('dark-mode');
         }
-        savePreferences(prefs);
     }, [prefs.theme]);
-
-    useEffect(() => {
-        savePreferences(prefs);
-    }, [prefs.lang]);
 
     const t = (key) => {
         const texts = translations[prefs.lang] || translations['ko'];

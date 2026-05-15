@@ -83,15 +83,15 @@ const STAGE_QUIZZES = [
 ];
 
 const STAGES = [
-  { name: 'STAGE 1', bg: ['#e8f4e8', '#c8e6c8'], ground: '#7cb87c', accent: '#5a9b5a', speed: 3.8, color: '#5a9b5a', stageLen: 1600, gap: 250, dark: false, bgImg: '/images/jump/bg-1.svg' },
-  { name: 'STAGE 2', bg: ['#e8eef8', '#c0d4f0'], ground: '#6688cc', accent: '#4466aa', speed: 5, color: '#4466aa', stageLen: 1800, gap: 220, dark: false, bgImg: '/images/jump/bg-2.svg' },
-  { name: 'STAGE 3', bg: ['#f8f0e0', '#f0d8b0'], ground: '#c8944a', accent: '#a07030', speed: 6.1, color: '#c8944a', stageLen: 2000, gap: 190, dark: false, bgImg: '/images/jump/bg-3.svg' },
-  { name: 'STAGE 4', bg: ['#f0e8f8', '#d8c0f0'], ground: '#9966cc', accent: '#7744aa', speed: 7.2, color: '#9966cc', stageLen: 2200, gap: 170, dark: false, bgImg: '/images/jump/bg-4.svg' },
-  { name: 'STAGE 5', bg: ['#f8e8e8', '#f0c0c0'], ground: '#cc5555', accent: '#aa3333', speed: 8.4, color: '#cc5555', stageLen: 2400, gap: 150, dark: false, bgImg: '/images/jump/bg-5.svg' },
-  { name: 'STAGE 6', bg: ['#e0f0f8', '#b0d8f0'], ground: '#3399bb', accent: '#1177aa', speed: 9.6, color: '#3399bb', stageLen: 2600, gap: 135, dark: false, bgImg: '/images/jump/bg-6.svg' },
-  { name: 'STAGE 7', bg: ['#1a1a2e', '#16213e'], ground: '#e94560', accent: '#c73652', speed: 10.8, color: '#e94560', stageLen: 2800, gap: 122, dark: true, bgImg: '/images/jump/bg-7.svg' },
-  { name: 'STAGE 8', bg: ['#0a0a0a', '#111111'], ground: '#ff6600', accent: '#dd4400', speed: 12, color: '#ff6600', stageLen: 3000, gap: 112, dark: true, bgImg: '/images/jump/bg-8.svg' },
-  { name: 'STAGE 9', bg: ['#000000', '#0a000a'], ground: '#ff00ff', accent: '#cc00cc', speed: 13.5, color: '#ff44ff', stageLen: 3400, gap: 102, dark: true, bgImg: '/images/jump/bg-9.svg' },
+  { name: 'STAGE 1', bg: ['#e8f4e8', '#c8e6c8'], ground: '#7cb87c', accent: '#5a9b5a', speed: 3.8, color: '#5a9b5a', stageLen: 1600, gap: 250, dark: false, bgImg: '/images/jump/level1.svg' },
+  { name: 'STAGE 2', bg: ['#e8eef8', '#c0d4f0'], ground: '#6688cc', accent: '#4466aa', speed: 5, color: '#4466aa', stageLen: 1800, gap: 220, dark: false, bgImg: '/images/jump/level2.svg' },
+  { name: 'STAGE 3', bg: ['#f8f0e0', '#f0d8b0'], ground: '#c8944a', accent: '#a07030', speed: 6.1, color: '#c8944a', stageLen: 2000, gap: 190, dark: false, bgImg: '/images/jump/level3.svg' },
+  { name: 'STAGE 4', bg: ['#f0e8f8', '#d8c0f0'], ground: '#9966cc', accent: '#7744aa', speed: 7.2, color: '#9966cc', stageLen: 2200, gap: 170, dark: false, bgImg: '/images/jump/level4.svg' },
+  { name: 'STAGE 5', bg: ['#f8e8e8', '#f0c0c0'], ground: '#cc5555', accent: '#aa3333', speed: 8.4, color: '#cc5555', stageLen: 2400, gap: 150, dark: false, bgImg: '/images/jump/level5.svg' },
+  { name: 'STAGE 6', bg: ['#e0f0f8', '#b0d8f0'], ground: '#3399bb', accent: '#1177aa', speed: 9.6, color: '#3399bb', stageLen: 2600, gap: 135, dark: false, bgImg: '/images/jump/level6.svg' },
+  { name: 'STAGE 7', bg: ['#1a1a2e', '#16213e'], ground: '#e94560', accent: '#c73652', speed: 10.8, color: '#e94560', stageLen: 2800, gap: 122, dark: true, bgImg: '/images/jump/level7.svg' },
+  { name: 'STAGE 8', bg: ['#0a0a0a', '#111111'], ground: '#ff6600', accent: '#dd4400', speed: 12, color: '#ff6600', stageLen: 3000, gap: 112, dark: true, bgImg: '/images/jump/level8.svg' },
+  { name: 'STAGE 9', bg: ['#000000', '#0a000a'], ground: '#ff00ff', accent: '#cc00cc', speed: 13.5, color: '#ff44ff', stageLen: 3400, gap: 102, dark: true, bgImg: '/images/jump/level9.svg' },
 ];
 
 function roundedRect(ctx, x, y, w, h, r) {
@@ -120,6 +120,9 @@ export function MiniGame({ onBack }) {
   const assetsRef = useRef({ imgs: new Map() });
   const lastUiStateRef = useRef(null);
   const answerQuizRef = useRef(null);
+  const coinSoundRef = useRef(null);
+  const smashSoundRef = useRef(null);
+  const errorSoundRef = useRef(null);
   const navigate = useNavigate();
   const gameRef = useRef({
     stageIdx: 0, state: 'idle', dist: 0, bgOffset: 0, lives: MAX_LIVES,
@@ -150,6 +153,32 @@ export function MiniGame({ onBack }) {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     const g = gameRef.current;
+    const coinAudio = new Audio();
+    coinAudio.src = '/audio/jump/jumpcoin.mp3';
+    coinAudio.volume = 0.5;
+    coinAudio.load();
+    coinSoundRef.current = coinAudio;
+
+    const smashAudio = new Audio();
+    smashAudio.src = '/audio/jump/jumpsmash.mp3';
+    smashAudio.volume = 0.55;
+    smashAudio.load();
+    smashSoundRef.current = smashAudio;
+
+    const errorAudio = new Audio();
+    errorAudio.src = '/audio/jump/jumperror.mp3';
+    errorAudio.volume = 0.55;
+    errorAudio.load();
+    errorSoundRef.current = errorAudio;
+
+    function playSfx(ref) {
+      const a = ref.current;
+      if (!a) return;
+      try {
+        a.currentTime = 0;
+        void a.play().catch(() => {});
+      } catch (_) {}
+    }
 
     let lastW = -1;
     let lastH = -1;
@@ -353,6 +382,15 @@ export function MiniGame({ onBack }) {
       return bx < o.x + o.w && bx + bw > o.x && by < o.y + o.h && by + bh > o.y;
     }
 
+    /** AABB for coin pickup — taller than obstacle `collides` so ground-level coins register without jumping. */
+    function birdCoinAabb() {
+      const { bird } = g;
+      if (bird.sliding) {
+        return { bx: bird.x + 6, by: GY - 20, bw: 36, bh: 52 };
+      }
+      return { bx: bird.x + 6, by: bird.y - 32, bw: 32, bh: 74 };
+    }
+
     function showQuiz(quiz, obstacle) {
       g.quizActive = true; g.currentQuiz = quiz; g.currentObs = obstacle;
       setQuizState({ visible: true, code: quiz.code, opts: quiz.opts, feedback: '', feedbackColor: '', locked: false });
@@ -377,6 +415,7 @@ export function MiniGame({ onBack }) {
       const correct = answer === g.currentQuiz.ans;
       setQuizState((prev) => ({ ...prev, locked: true }));
       if (correct) {
+        playSfx(smashSoundRef);
         g.currentObs.passed = true;
         spawnSparkles(g.bird.x + 18, g.bird.y);
         syncUi({
@@ -392,6 +431,7 @@ export function MiniGame({ onBack }) {
         window.setTimeout(finishQuiz, 650);
         return;
       }
+      playSfx(errorSoundRef);
       g.lives = Math.max(0, g.lives - 1);
       g.deathFlash = 0.8;
       g.combo = { count: 0, mult: 1, lastAt: 0 };
@@ -507,7 +547,7 @@ export function MiniGame({ onBack }) {
         ctx.fillText('⬇ 슬라이드', o.x + o.w / 2, o.y + o.h / 2 + 5);
         return;
       }
-      const src = o.type === 'snake' ? '/images/jump/obs-snake.svg' : '/images/jump/obs-bug.svg';
+      const src = o.type === 'snake' ? '/images/jump/rock2.svg' : '/images/jump/rock1.svg';
       const img = getImg(src);
       if (img && img.complete && img.naturalWidth) {
         ctx.imageSmoothingEnabled = true;
@@ -525,7 +565,7 @@ export function MiniGame({ onBack }) {
 
     function drawCoin(c) {
       if (c.taken) return;
-      const img = getImg('/images/jump/item-coin.svg');
+      const img = getImg('/images/jump/coin.svg');
       if (img && img.complete && img.naturalWidth) {
         ctx.drawImage(img, c.x - 14, c.y - 14, 28, 28);
         return;
@@ -592,8 +632,8 @@ export function MiniGame({ onBack }) {
         }
         // combo decay
         if (g.combo.count > 0 && Date.now() - g.combo.lastAt > COMBO_WINDOW_MS) g.combo = { count: 0, mult: 1, lastAt: 0 };
-        // coin pickup
-        const bx = g.bird.x + 12, by = g.bird.y + 6, bw = 20, bh = 38;
+        // coin pickup (generous vs. obstacle hitbox so walking/jumping both collect)
+        const { bx, by, bw, bh } = birdCoinAabb();
         for (const c of g.coins) {
           if (c.taken) continue;
           if (c.x < -40 || c.x > W + 40) continue;
@@ -604,6 +644,10 @@ export function MiniGame({ onBack }) {
           const dy = cy - closestY;
           if (dx * dx + dy * dy <= (c.r + 2) * (c.r + 2)) {
             c.taken = true;
+            if (coinSoundRef.current) {
+              coinSoundRef.current.currentTime = 0;
+              coinSoundRef.current.play().catch(() => {});
+            }
             const now = Date.now();
             const chained = g.combo.lastAt && (now - g.combo.lastAt) <= COMBO_WINDOW_MS;
             const nextCount = chained ? (g.combo.count + 1) : 1;
@@ -675,6 +719,9 @@ export function MiniGame({ onBack }) {
       canvas.removeEventListener('click', onClick);
       canvas.removeEventListener('touchstart', onTouch);
       window.removeEventListener('resize', onResize);
+      if (coinSoundRef.current) coinSoundRef.current.pause();
+      if (smashSoundRef.current) smashSoundRef.current.pause();
+      if (errorSoundRef.current) errorSoundRef.current.pause();
     };
   }, []);
 
