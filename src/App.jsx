@@ -39,11 +39,7 @@ function App() {
         <Route path="/pattern"  element={<Pattern t={t} />} />
         <Route path="/result"   element={<Result t={t} />} />
         <Route path="/minigame" element={<MiniGame />} />
-<<<<<<< HEAD
-        <Route path="/play" element={<Quiz t={t} />} />
-=======
         <Route path="/play" element={<Quiz t={t} params={params} />} />
->>>>>>> 906e172970d4ac40149e1dd39b7697e3c6a7fa51
       </Routes>
     </BrowserRouter>
   );
