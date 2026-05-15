@@ -345,7 +345,7 @@ function readStoredPersona(fallback) {
 export function Quiz({ t, params }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const settings = location.state || { count: 10, ratio: 50, chapter: 1, difficulty: '중' };
+  const settings = location.state || { count: 10, ratio: 50, chapter: 1 };
 
   const [persona, setPersona] = useState(() => readStoredPersona(params?.persona));
   const tutorPersona = getTutorPersona(persona);
@@ -412,8 +412,8 @@ export function Quiz({ t, params }) {
         return;
       }
     }
-    const { count, ratio, chapter, difficulty } = settings;
-    let pool = javaProblems.filter((p) => (p.chapter === chapter || chapter === 0) && p.difficulty === difficulty);
+    const { count, ratio, chapter } = settings;
+    let pool = javaProblems.filter((p) => p.chapter === chapter || chapter === 0);
     if (pool.length === 0) pool = javaProblems.filter((p) => p.chapter === chapter || chapter === 0);
     if (pool.length === 0) pool = javaProblems;
     const objCount = Math.round(count * (ratio / 100));

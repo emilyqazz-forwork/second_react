@@ -77,7 +77,63 @@ export function Home({ t }) {
   };
 
   return (
-    <div className="main-container" style={{ display: 'flex' }}>
+    <div className="main-container home-page" style={{ display: 'flex' }}>
+      <style>{`
+        .home-page .btn-link img {
+          mix-blend-mode: multiply;
+          transition: transform 0.25s ease, filter 0.25s ease;
+        }
+        .home-page .btn-link:hover img {
+          animation: home-btn-float 1.4s ease-in-out infinite;
+          filter:
+            drop-shadow(0 0 6px rgba(255, 235, 130, 1))
+            drop-shadow(0 0 14px rgba(255, 210, 70, 0.9))
+            drop-shadow(0 0 26px rgba(255, 193, 7, 0.55));
+        }
+        .home-page .btn-link:active img {
+          animation: home-btn-pop 0.45s ease forwards;
+          filter:
+            drop-shadow(0 0 8px rgba(255, 245, 170, 1))
+            drop-shadow(0 0 18px rgba(255, 220, 90, 1))
+            drop-shadow(0 0 34px rgba(255, 193, 7, 0.8));
+        }
+        .home-page .btn-link:hover .home-btn-label {
+          text-shadow:
+            0 0 8px rgba(255, 220, 100, 0.95),
+            0 0 16px rgba(255, 193, 7, 0.5),
+            0 1px 0 rgba(255, 248, 216, 0.8);
+        }
+        .home-page .btn-link:active .home-btn-label {
+          text-shadow:
+            0 0 10px rgba(255, 235, 140, 1),
+            0 0 20px rgba(255, 200, 60, 0.85),
+            0 1px 0 rgba(255, 248, 216, 0.8);
+        }
+        .home-page .btn-link {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 6px;
+        }
+        .home-page .home-btn-label {
+          font-family: 'Jua', sans-serif;
+          font-size: 15px;
+          font-weight: 700;
+          color: #3e2723;
+          text-shadow: 0 1px 0 rgba(255, 248, 216, 0.8);
+          pointer-events: none;
+        }
+        @keyframes home-btn-float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-10px); }
+        }
+        @keyframes home-btn-pop {
+          0% { transform: translateY(0) scale(1); }
+          35% { transform: translateY(-16px) scale(1.06); }
+          65% { transform: translateY(-10px) scale(1.03); }
+          100% { transform: translateY(-12px) scale(1.04); }
+        }
+      `}</style>
       <header className="header">
         <h1 className="glow-title">{t('main_title')}</h1>
         {/* 타이핑 애니메이션 텍스트 + 깜빡이는 커서 */}
@@ -86,24 +142,38 @@ export function Home({ t }) {
 
       {/* 메인 버튼 메뉴 */}
       <div className="button-wrapper">
-        <div className="btn-bar">
-          <button className="flat-btn" onClick={() => setStep('lang')}>
-            <span className="btn-icon">✏️</span>
-            문제풀기
-          </button>
-          <button className="flat-btn" onClick={() => navigate('/note')}>
-            <span className="btn-icon">📖</span>
-            오답노트
-          </button>
-          <button className="flat-btn" onClick={() => navigate('/pattern')}>
-            <span className="btn-icon">📊</span>
-            패턴분석
-          </button>
-          <button className="flat-btn" onClick={() => navigate('/minigame')}>
-            <span className="btn-icon">🎮</span>
-            미니게임
-          </button>
-        </div>
+        <button
+          className="btn-link"
+          onClick={() => setStep('lang')}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+        >
+          <img src="/images/home_quiz.png" alt="" />
+          <span className="home-btn-label">문제풀기</span>
+        </button>
+        <button
+          className="btn-link"
+          onClick={() => navigate('/note')}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+        >
+          <img src="/images/home_ox.png" alt="" />
+          <span className="home-btn-label">오답노트</span>
+        </button>
+        <button
+          className="btn-link"
+          onClick={() => navigate('/pattern')}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+        >
+          <img src="/images/home_pattern.png" alt="" />
+          <span className="home-btn-label">패턴분석</span>
+        </button>
+        <button
+          className="btn-link"
+          onClick={() => navigate('/minigame')}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+        >
+          <img src="/images/home_game.png" alt="" />
+          <span className="home-btn-label">미니게임</span>
+        </button>
       </div>
 
       {/* step 상태에 따라 해당 모달만 렌더링 */}
@@ -262,7 +332,6 @@ function ChapterModal({ t, level, progress, onClose, onBack, onSelect }) {
 function QuizSettingModal({ t, onClose, onBack, onStart }) {
   const [ratio, setRatio] = useState(50);           // 객관식/주관식 비율 (기본 50:50)
   const [count, setCount] = useState(10);           // 문제 수 (기본 10개)
-  const [difficulty, setDifficulty] = useState('중'); // 난이도 (기본 중)
 
   return (
     <div className="modal-overlay" style={{ display: 'flex' }}>
@@ -284,19 +353,10 @@ function QuizSettingModal({ t, onClose, onBack, onStart }) {
             <label>{t('quiz_count')}</label>
             <input type="number" min="1" max="20" value={count} onChange={(e) => setCount(Number(e.target.value))} className="setting-input" />
           </div>
-          {/* 난이도 선택 */}
-          <div className="setting-group">
-            <label>{t('quiz_diff')}</label>
-            <select className="setting-select" value={difficulty} onChange={(e) => setDifficulty(e.target.value)}>
-              <option value="하">{t('diff_easy')}</option>
-              <option value="중">{t('diff_medium')}</option>
-              <option value="상">{t('diff_hard')}</option>
-            </select>
-          </div>
           {/* 퀴즈 시작 버튼 - 설정값을 onStart에 전달 */}
           <button
             className="clay-submit"
-            onClick={() => onStart({ ratio, count, difficulty })}
+            onClick={() => onStart({ ratio, count })}
             style={{ width: '100%', marginTop: '15px' }}
           >
             {t('btn_start_quiz')}
