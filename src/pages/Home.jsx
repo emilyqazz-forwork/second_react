@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAttempts } from '../state/app-state';
+import { settingsButtonRef } from '../state/tutorial-refs';
 
 // 챕터 데이터 - 난이도별(basic/mid/adv) 챕터 목록
 const JAVA_CHAPTERS = {
@@ -18,7 +19,187 @@ const JAVA_CHAPTERS = {
   ],
 };
 
-export function Home({ t }) {
+const TUTORIAL_STEPS = [
+  { selector: null, titleKey: 'tutorial_welcome_title', bodyKey: 'tutorial_welcome_body' },
+  { selector: '.home-page .button-wrapper', titleKey: 'tutorial_menu_title', bodyKey: 'tutorial_menu_body' },
+  { selector: '#globalSettingsBtn', titleKey: 'tutorial_settings_title', bodyKey: 'tutorial_settings_body' },
+  { selector: '.home-login-action', titleKey: 'tutorial_login_title', bodyKey: 'tutorial_login_body' },
+  { selector: '#homeBgmBtn', titleKey: 'tutorial_bgm_title', bodyKey: 'tutorial_bgm_body' },
+];
+
+function hasSeenTutorial() {
+  try {
+    const seen = window.localStorage.getItem('chickode_tutorial_seen');
+    return seen === 'true' || seen === '1';
+  } catch {
+    return false;
+  }
+}
+
+function markTutorialSeen() {
+  try {
+    window.localStorage.setItem('chickode_tutorial_seen', 'true');
+  } catch {
+    // noop
+  }
+}
+
+function HomeCoachmark({ t, step, onNext, onSkip }) {
+  const [rect, setRect] = useState(null);
+  const current = TUTORIAL_STEPS[step];
+  const isLast = step === TUTORIAL_STEPS.length - 1;
+  const isSettingsStep = current?.selector === '#globalSettingsBtn';
+
+  useEffect(() => {
+    if (step == null || !current?.selector) {
+      setRect(null);
+      return undefined;
+    }
+    const update = () => {
+      if (isSettingsStep && settingsButtonRef.current) {
+        setRect(settingsButtonRef.current.getBoundingClientRect());
+        return;
+      }
+      const el = document.querySelector(current.selector);
+      setRect(el ? el.getBoundingClientRect() : null);
+    };
+    update();
+    const raf = window.requestAnimationFrame(update);
+    window.addEventListener('resize', update);
+    window.addEventListener('scroll', update, true);
+    return () => {
+      window.cancelAnimationFrame(raf);
+      window.removeEventListener('resize', update);
+      window.removeEventListener('scroll', update, true);
+    };
+  }, [step, current?.selector, isSettingsStep]);
+
+  if (step == null || !current) return null;
+
+  const pad = 10;
+  const spotlightStyle = rect
+    ? {
+        top: rect.top - pad,
+        left: rect.left - pad,
+        width: rect.width + pad * 2,
+        height: rect.height + pad * 2,
+      }
+    : null;
+
+  let tooltipTop = '50%';
+  let tooltipLeft = '50%';
+  let tooltipTransform = 'translate(-50%, -50%)';
+  const tooltipMaxWidth = 320;
+
+  if (rect && isSettingsStep) {
+    const gap = 12;
+    const centerX = rect.left + rect.width / 2;
+    tooltipTop = `${rect.bottom + gap}px`;
+    tooltipLeft = `${Math.min(
+      Math.max(centerX, tooltipMaxWidth / 2 + 16),
+      window.innerWidth - tooltipMaxWidth / 2 - 16,
+    )}px`;
+    tooltipTransform = 'translateX(-50%)';
+  } else if (rect) {
+    const below = rect.bottom + 16;
+    const above = rect.top - 16;
+    const placeBelow = below + 180 < window.innerHeight;
+    tooltipLeft = `${Math.min(
+      Math.max(rect.left + rect.width / 2, tooltipMaxWidth / 2 + 16),
+      window.innerWidth - tooltipMaxWidth / 2 - 16,
+    )}px`;
+    tooltipTransform = 'translateX(-50%)';
+    tooltipTop = placeBelow ? `${below}px` : `${above}px`;
+    if (!placeBelow) tooltipTransform = 'translate(-50%, -100%)';
+  }
+
+  return (
+    <div className="home-coachmark-root" role="dialog" aria-modal="true">
+      <style>{`
+        .home-coachmark-root {
+          position: fixed;
+          inset: 0;
+          z-index: 10050;
+        }
+        .home-coachmark-backdrop {
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.55);
+          z-index: 10051;
+        }
+        .home-coachmark-spotlight {
+          position: fixed;
+          border-radius: 14px;
+          box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
+          z-index: 10052;
+          pointer-events: none;
+          transition: top 0.25s ease, left 0.25s ease, width 0.25s ease, height 0.25s ease;
+        }
+        .home-coachmark-tooltip {
+          position: fixed;
+          z-index: 10053;
+          width: min(320px, calc(100vw - 32px));
+          background: #fdf6e3;
+          border: 3px solid #5d4037;
+          border-radius: 16px;
+          padding: 18px 18px 14px;
+          box-shadow: 6px 6px 0 #3e2723;
+          font-family: 'Jua', sans-serif;
+          color: #3e2723;
+        }
+        .home-coachmark-tooltip h3 {
+          margin: 0 0 8px;
+          font-size: 1.1rem;
+        }
+        .home-coachmark-tooltip p {
+          margin: 0 0 14px;
+          font-size: 0.95rem;
+          line-height: 1.45;
+        }
+        .home-coachmark-actions {
+          display: flex;
+          justify-content: flex-end;
+          gap: 8px;
+        }
+        .home-coachmark-actions button {
+          border: 2px solid #5d4037;
+          border-radius: 10px;
+          padding: 8px 14px;
+          font-family: 'Jua', sans-serif;
+          font-weight: 700;
+          cursor: pointer;
+        }
+        .home-coachmark-skip {
+          background: #e8dcc8;
+          color: #5d4037;
+        }
+        .home-coachmark-next {
+          background: #5d4037;
+          color: #fff8d8;
+        }
+      `}</style>
+      {!spotlightStyle && <div className="home-coachmark-backdrop" />}
+      {spotlightStyle && <div className="home-coachmark-spotlight" style={spotlightStyle} />}
+      <div
+        className="home-coachmark-tooltip"
+        style={{ top: tooltipTop, left: tooltipLeft, transform: tooltipTransform }}
+      >
+        <h3>{t(current.titleKey)}</h3>
+        <p>{t(current.bodyKey)}</p>
+        <div className="home-coachmark-actions">
+          <button type="button" className="home-coachmark-skip" onClick={onSkip}>
+            {t('tutorial_skip')}
+          </button>
+          <button type="button" className="home-coachmark-next" onClick={onNext}>
+            {isLast ? t('tutorial_done') : t('tutorial_next')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function Home({ t, lang }) {
   // step: 현재 어떤 모달을 보여줄지 관리 (null이면 모달 없음)
   const [step, setStep] = useState(null); // null | 'lang' | 'level' | 'chapter' | 'setting'
   const [selectedLang, setSelectedLang] = useState(null);     // 선택한 언어 (java, python 등)
@@ -26,7 +207,30 @@ export function Home({ t }) {
   const [selectedChapter, setSelectedChapter] = useState(null); // 선택한 챕터 번호
   const [progress, setProgress] = useState({});               // 챕터별 진도율 (0~100%)
   const [displayText, setDisplayText] = useState('');         // 타이핑 애니메이션 텍스트
+  const [tutorialStep, setTutorialStep] = useState(null);
   const navigate = useNavigate();
+
+  const finishTutorial = useCallback(() => {
+    setTutorialStep(null);
+    markTutorialSeen();
+  }, []);
+
+  const startTutorial = useCallback(() => {
+    setStep(null);
+    setTutorialStep(0);
+  }, []);
+
+  useEffect(() => {
+    const onStart = () => startTutorial();
+    window.addEventListener('chickode:start_tutorial_on_home', onStart);
+    return () => window.removeEventListener('chickode:start_tutorial_on_home', onStart);
+  }, [startTutorial]);
+
+  useEffect(() => {
+    if (hasSeenTutorial()) return undefined;
+    const timer = window.setTimeout(() => startTutorial(), 600);
+    return () => window.clearTimeout(timer);
+  }, [startTutorial]);
 
   // 챕터별 진도율 계산
   useEffect(() => {
@@ -57,16 +261,16 @@ export function Home({ t }) {
 
   // 타이핑 애니메이션 - 한 글자씩 80ms마다 추가
   useEffect(() => {
-    const fullText = '초보 개발자를 위한 자바 코딩도우미';
+    const fullText = t('main_subtitle');
     let idx = 0;
     setDisplayText('');
     const timer = setInterval(() => {
       idx += 1;
       setDisplayText(fullText.slice(0, idx));
-      if (idx >= fullText.length) clearInterval(timer); // 다 출력되면 타이머 종료
+      if (idx >= fullText.length) clearInterval(timer);
     }, 80);
-    return () => clearInterval(timer); // 컴포넌트 언마운트 시 타이머 정리
-  }, []);
+    return () => clearInterval(timer);
+  }, [lang, t]);
 
   // 모달 전체 닫기 및 선택값 초기화
   const closeAll = () => {
@@ -148,7 +352,7 @@ export function Home({ t }) {
           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
         >
           <img src="/images/home_quiz.png" alt="" />
-          <span className="home-btn-label">문제풀기</span>
+          <span className="home-btn-label">{t('btn_quiz')}</span>
         </button>
         <button
           className="btn-link"
@@ -156,7 +360,7 @@ export function Home({ t }) {
           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
         >
           <img src="/images/home_ox.png" alt="" />
-          <span className="home-btn-label">오답노트</span>
+          <span className="home-btn-label">{t('btn_note')}</span>
         </button>
         <button
           className="btn-link"
@@ -164,7 +368,7 @@ export function Home({ t }) {
           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
         >
           <img src="/images/home_pattern.png" alt="" />
-          <span className="home-btn-label">패턴분석</span>
+          <span className="home-btn-label">{t('btn_pattern')}</span>
         </button>
         <button
           className="btn-link"
@@ -172,7 +376,7 @@ export function Home({ t }) {
           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
         >
           <img src="/images/home_game.png" alt="" />
-          <span className="home-btn-label">미니게임</span>
+          <span className="home-btn-label">{t('btn_minigame')}</span>
         </button>
       </div>
 
@@ -229,6 +433,18 @@ export function Home({ t }) {
             // 퀴즈 시작 - 설정값과 챕터 정보를 가지고 /play 페이지로 이동
             navigate('/play', { state: { ...settings, chapter: selectedChapter } });
           }}
+        />
+      )}
+
+      {tutorialStep != null && (
+        <HomeCoachmark
+          t={t}
+          step={tutorialStep}
+          onNext={() => {
+            if (tutorialStep >= TUTORIAL_STEPS.length - 1) finishTutorial();
+            else setTutorialStep((s) => s + 1);
+          }}
+          onSkip={finishTutorial}
         />
       )}
     </div>
